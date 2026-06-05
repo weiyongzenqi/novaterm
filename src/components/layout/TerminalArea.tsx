@@ -81,6 +81,8 @@ export function TerminalArea({
       const terminal = terminalHandle?.terminal;
       if (!terminal) return;
 
+      console.log('[TerminalArea] Status changed for tab:', tabId, 'status:', status);
+
       // Clear old onData disposable
       const existing = dataDisposablesRef.current.get(tabId);
       if (existing) {
@@ -90,6 +92,7 @@ export function TerminalArea({
 
       if (status === 'connected') {
         // SSH mode: forward input to backend
+        console.log('[TerminalArea] Setting up SSH onData for tab:', tabId);
         const disposable = terminal.onData((data) => {
           onSendData(tabId, data);
         });
@@ -99,6 +102,7 @@ export function TerminalArea({
         terminal.write(`\x1b[1;32m${t('terminal.connected')}\x1b[0m\r\n`);
       } else if (status === 'disconnected') {
         // Local echo mode for disconnected tabs
+        console.log('[TerminalArea] Setting up local echo for tab:', tabId);
         const disposable = terminal.onData((data) => {
           terminal.write(data);
         });

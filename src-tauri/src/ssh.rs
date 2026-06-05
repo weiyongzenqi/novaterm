@@ -303,13 +303,26 @@ async fn run_session<R: Runtime>(
 
     let addr = format!("{}:{}", config.host, config.port);
 
+    eprintln!("[SSH] Starting connection to {}", addr);
+
     // Connect to server with 15 second timeout
     let connect_future = russh::client::connect(ssh_config, addr.as_str(), handler);
-    let mut handle = timeout(Duration::from_secs(15), connect_future)
-        .await
-        .with_context(|| format!("connection timeout to {}", addr))?
-        .with_context(|| format!("connection failed to {}", addr))?;
+    let mut handle = match timeout(Duration::from_secs(15), connect_future).await {
+        Ok(Ok(h)) => {
+            eprintln!("[SSH] TCP connection established to {}", addr);
+            h
+        }
+        Ok(Err(e)) => {
+            eprintln!("[SSH] Connection failed to {}: {:#}", addr, e);
+            return Err(anyhow!("connection failed to {}: {:#}", addr, e));
+        }
+        Err(_) => {
+            eprintln!("[SSH] Connection timed out to {}", addr);
+            return Err(anyhow!("connection timed out to {}", addr));
+        }
+    };
 
+    eprintln!("[SSH] Starting authentication...");
     // Authenticate
     let auth_result = match &config.auth {
         AuthConfig::Password { password } => {
@@ -347,6 +360,8 @@ async fn run_session<R: Runtime>(
     // Check authentication result
     let authed = matches!(auth_result, russh::client::AuthResult::Success);
 
+    eprintln!("[SSH] Authentication result: {}", if authed { "SUCCESS" } else { "FAILED" });
+
     if !authed {
         let _ = events.send(SessionEvent::Error {
             session_id: session_id.clone(),
@@ -359,11 +374,13 @@ async fn run_session<R: Runtime>(
     }
 
     // Open PTY session
+    eprintln!("[SSH] Opening session channel...");
     let mut channel = handle
         .channel_open_session()
         .await
         .context("failed to open session channel")?;
 
+    eprintln!("[SSH] Requesting PTY...");
     channel
         .request_pty(
             true,
@@ -377,10 +394,13 @@ async fn run_session<R: Runtime>(
         .await
         .context("failed to request PTY")?;
 
+    eprintln!("[SSH] Requesting shell...");
     channel.request_shell(true).await.context("failed to request shell")?;
 
     // Notify frontend of successful connection
+    eprintln!("[SSH] Sending Connected event to frontend...");
     let _ = events.send(SessionEvent::Connected { session_id: session_id.clone() });
+    eprintln!("[SSH] Session fully established! Entering event loop.");
 
     // Main event loop
     loop {
@@ -473,6 +493,8 @@ impl Handler for ClientHandler {
             .fingerprint(Default::default())
             .to_string();
 
+        eprintln!("[SSH] check_server_key called for {}:{}, fingerprint: {}", self.host, self.port, fingerprint);
+
         let known = russh::keys::known_hosts::check_known_hosts(
             &self.host,
             self.port,
@@ -480,8 +502,12 @@ impl Handler for ClientHandler {
         );
 
         let needs_confirmation = match &known {
-            Ok(true) => false,
+            Ok(true) => {
+                eprintln!("[SSH] Host key KNOWN - accepting silently");
+                false
+            }
             _ => {
+                eprintln!("[SSH] Host key UNKNOWN or CHANGED - requesting confirmation");
                 // Unknown or changed host - needs confirmation
                 if let Err(russh::keys::Error::KeyChanged { line }) = &known {
                     let _ = self.events.send(SessionEvent::Error {
@@ -505,15 +531,24 @@ impl Handler for ClientHandler {
 
         async move {
             if !needs_confirmation {
+                eprintln!("[SSH] check_server_key: no confirmation needed, returning true");
                 return Ok(true);
             }
 
             if let Some(rx) = rx_opt {
+                eprintln!("[SSH] check_server_key: waiting for user confirmation (30s timeout)...");
                 match tokio::time::timeout(std::time::Duration::from_secs(30), rx).await {
-                    Ok(Ok(accepted)) => Ok(accepted),
-                    _ => Ok(false),
+                    Ok(Ok(accepted)) => {
+                        eprintln!("[SSH] check_server_key: user responded: {}", if accepted { "ACCEPTED" } else { "REJECTED" });
+                        Ok(accepted)
+                    }
+                    _ => {
+                        eprintln!("[SSH] check_server_key: timeout or error, rejecting");
+                        Ok(false)
+                    }
                 }
             } else {
+                eprintln!("[SSH] check_server_key: no oneshot channel available, rejecting");
                 Ok(false)
             }
         }

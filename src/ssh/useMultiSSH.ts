@@ -39,14 +39,17 @@ export function useMultiSSH(): MultiSSHState {
     const setupListener = async () => {
       unlistenRef.current = await listen<SSHSessionEvent>('ssh-event', (event) => {
         const payload = event.payload;
+        console.log('[SSH Frontend] Received event:', payload.type, 'sessionId:', payload.sessionId);
 
         // Find which tab this session belongs to
         setSessions(prev => {
           const newMap = new Map(prev);
           for (const [tabId, state] of newMap.entries()) {
             if (state.sessionId === payload.sessionId) {
+              console.log('[SSH Frontend] Matched tab:', tabId, 'current status:', state.status);
               switch (payload.type) {
                 case 'connected':
+                  console.log('[SSH Frontend] Setting status to CONNECTED for tab:', tabId);
                   newMap.set(tabId, { ...state, status: 'connected', error: null });
                   break;
                 case 'output':
@@ -86,6 +89,7 @@ export function useMultiSSH(): MultiSSHState {
   }, []);
 
   const connect = useCallback(async (tabId: string, config: SSHConfig): Promise<string> => {
+    console.log('[SSH Frontend] connect called for tab:', tabId, 'host:', config.host, 'port:', config.port);
     setSessions(prev => {
       const newMap = new Map(prev);
       newMap.set(tabId, { sessionId: null, status: 'connecting', error: null });
@@ -95,6 +99,7 @@ export function useMultiSSH(): MultiSSHState {
     try {
       const cols = 80;
       const rows = 24;
+      console.log('[SSH Frontend] Invoking ssh_connect...');
       const invokePromise = invoke<string>('ssh_connect', {
         host: config.host,
         port: config.port,
@@ -109,6 +114,7 @@ export function useMultiSSH(): MultiSSHState {
 
       const result = await Promise.race([invokePromise, timeoutPromise]);
       const sessionId = result;
+      console.log('[SSH Frontend] ssh_connect returned sessionId:', sessionId);
 
       setSessions(prev => {
         const newMap = new Map(prev);
