@@ -1,0 +1,71 @@
+name: Build NovaTerm
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            ext: deb
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            ext: dmg
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: msi
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install dependencies (ubuntu)
+      if: matrix.platform == 'ubuntu-22.04'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
+
+    - name: Install frontend dependencies
+      run: npm ci
+
+    - name: Build Tauri app
+      uses: tauri-apps/tauri-action@v0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tagName: v__VERSION__
+        releaseName: NovaTerm v__VERSION__
+        releaseBody: |
+          NovaTerm - 跨平台 SSH 终端客户端
+          
+          **功能特性：**
+          - SSH 连接管理（密码/密钥认证）
+          - SFTP 文件传输面板
+          - 多标签终端
+          - 6 套内置主题（Dracula, Gruvbox, Nord 等）
+          - 会话配置持久化
+        releaseDraft: false
+        prerelease: false
+        args: --target ${{ matrix.target }}

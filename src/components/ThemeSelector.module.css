@@ -1,0 +1,39 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--status-bar-text, #6c7086);
+}
+
+.select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #313244);
+  border-radius: 6px;
+  background-color: var(--input-bg, #11111b);
+  color: var(--input-text, #cdd6f4);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.select:hover {
+  border-color: var(--accent-color, #cba6f7);
+}
+
+.select:focus {
+  border-color: var(--accent-color, #cba6f7);
+}
+
+.select option {
+  background-color: var(--input-bg, #11111b);
+  color: var(--input-text, #cdd6f4);
+}

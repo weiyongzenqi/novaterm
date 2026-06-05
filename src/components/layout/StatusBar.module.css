@@ -1,0 +1,35 @@
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 12px;
+  background-color: var(--status-bar-bg, #11111b);
+  border-top: 1px solid var(--border-color, #313244);
+  color: var(--status-bar-text, #6c7086);
+  font-size: 12px;
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #f38ba8;
+}
+
+.divider {
+  color: var(--border-color, #313244);
+}

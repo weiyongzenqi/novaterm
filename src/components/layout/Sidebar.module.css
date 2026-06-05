@@ -1,0 +1,187 @@
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: 100%;
+  background-color: var(--sidebar-bg, #1e1e2e);
+  border-right: 1px solid var(--border-color, #313244);
+  display: flex;
+  flex-direction: column;
+  color: var(--sidebar-text, #cdd6f4);
+}
+
+.header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color, #313244);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent-color, #cba6f7);
+}
+
+.section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #313244);
+}
+
+.sectionTitle {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--status-bar-text, #6c7086);
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.newConnectionButton {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: var(--accent-color, #cba6f7);
+  color: var(--sidebar-bg, #1e1e2e);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.newConnectionButton:hover {
+  opacity: 0.9;
+}
+
+.newConnectionButton:active {
+  opacity: 0.8;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f38ba8;
+}
+
+.statusText {
+  font-size: 13px;
+  color: var(--status-bar-text, #6c7086);
+}
+
+.monitorPlaceholder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.monitorItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monitorLabel {
+  font-size: 11px;
+  color: var(--status-bar-text, #6c7086);
+}
+
+.monitorBar {
+  height: 4px;
+  background-color: var(--border-color, #313244);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.monitorBarFill {
+  height: 100%;
+  background-color: var(--accent-color, #cba6f7);
+  transition: width 0.3s ease;
+}
+
+.footer {
+  margin-top: auto;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color, #313244);
+}
+
+/* Sessions section */
+.sessionsSection {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #313244);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sessionsSection .sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manageButton {
+  font-size: 11px;
+  color: var(--status-bar-text, #6c7086);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.manageButton:hover {
+  color: var(--accent-color, #cba6f7);
+}
+
+.sessionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sessionItem {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sessionItem:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+.sessionName {
+  font-size: 13px;
+  color: var(--sidebar-text, #cdd6f4);
+  font-weight: 500;
+}
+
+.sessionHost {
+  font-size: 11px;
+  color: var(--status-bar-text, #6c7086);
+  margin-top: 2px;
+}
+
+.sessionGroup {
+  margin-top: 8px;
+}
+
+.sessionGroupTitle {
+  font-size: 11px;
+  color: var(--status-bar-text, #6c7086);
+  font-weight: 500;
+  margin-bottom: 4px;
+  padding-left: 10px;
+}
+
+.emptySessions {
+  font-size: 12px;
+  color: var(--status-bar-text, #6c7086);
+  padding: 8px 10px;
+}
