@@ -1,4 +1,5 @@
 import { useTheme } from '../themes';
+import { t } from '../i18n/zh';
 import styles from './ThemeSelector.module.css';
 
 export function ThemeSelector() {
@@ -11,7 +12,7 @@ export function ThemeSelector() {
   return (
     <div className={styles.container}>
       <label className={styles.label} htmlFor="theme-selector">
-        Theme
+        {t('theme.label')}
       </label>
       <select
         id="theme-selector"

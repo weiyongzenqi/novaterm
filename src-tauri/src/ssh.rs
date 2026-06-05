@@ -67,6 +67,7 @@ pub enum SessionEvent {
 }
 
 /// Handle to an active SSH session.
+#[allow(dead_code)]
 pub struct SessionHandle {
     pub session_id: String,
     pub commands: UnboundedSender<SessionCommand>,
@@ -106,6 +107,7 @@ impl SSHManager {
     }
 
     /// Generate fingerprint for a public key (SHA256 format).
+    #[allow(dead_code)]
     fn fingerprint(key_bytes: &[u8]) -> String {
         use sha2::{Sha256, Digest};
         let hash = Sha256::digest(key_bytes);
@@ -231,7 +233,7 @@ async fn forward_events<R: Runtime>(
 
 /// Run an SSH session worker.
 async fn run_session<R: Runtime>(
-    app: AppHandle<R>,
+    _app: AppHandle<R>,
     session_id: String,
     config: SSHConfig,
     mut commands: UnboundedReceiver<SessionCommand>,
@@ -268,7 +270,7 @@ async fn run_session<R: Runtime>(
                 .await
                 .context("password authentication failed")?
         }
-        AuthConfig::Key { private_key_path, passphrase: _ } => {
+        AuthConfig::Key { private_key_path, passphrase } => {
             // Load private key from file
             let key_path = PathBuf::from(private_key_path);
             if !key_path.exists() {
@@ -278,9 +280,11 @@ async fn run_session<R: Runtime>(
             let key_content = std::fs::read_to_string(&key_path)
                 .with_context(|| format!("failed to read key file {}", private_key_path))?;
 
-            // Parse the private key
-            let keypair = russh::keys::PrivateKey::from_openssh(key_content)
-                .context("failed to parse private key")?;
+            // Parse the private key, using passphrase if provided
+            let keypair = russh::keys::decode_secret_key(
+                &key_content,
+                passphrase.as_deref(),
+            ).context("failed to parse private key")?;
 
             // Use PrivateKeyWithHashAlg for authentication
             let key_with_hash = russh::keys::PrivateKeyWithHashAlg::new(Arc::new(keypair), None);
@@ -402,7 +406,8 @@ async fn run_session<R: Runtime>(
 /// Client handler with host key verification.
 struct ClientHandler {
     host: String,
-    port: u16,
+    #[allow(dead_code)]
+    port: u16,  // reserved for future known_hosts per-port lookups
     events: UnboundedSender<SessionEvent>,
     session_id: String,
 }
@@ -415,30 +420,61 @@ impl Handler for ClientHandler {
         &mut self,
         server_public_key: &ssh_key::PublicKey,
     ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send {
-        // Get key bytes for fingerprint
-        let key_bytes = server_public_key.to_bytes();
-        let fingerprint = match key_bytes {
-            Ok(bytes) => SSHManager::fingerprint(&bytes),
-            Err(_) => "unknown".to_string(),
+        // Build fingerprint string
+        let fingerprint = server_public_key
+            .fingerprint(Default::default())
+            .to_string();
+
+        // Check against known_hosts
+        let known = russh::keys::known_hosts::check_known_hosts(
+            &self.host,
+            self.port,
+            server_public_key,
+        );
+
+        let accepted = match known {
+            Ok(true) => {
+                // Key is known and matches — accept silently
+                true
+            }
+            Ok(false) => {
+                // Unknown host — emit event so frontend can prompt user
+                let _ = self.events.send(SessionEvent::HostKeyUnknown {
+                    session_id: self.session_id.clone(),
+                    host: self.host.clone(),
+                    fingerprint: fingerprint.clone(),
+                });
+                // Accept for now (frontend confirm flow TBD)
+                true
+            }
+            Err(russh::keys::Error::KeyChanged { line }) => {
+                // Key changed! Emit warning — possible MITM attack
+                let _ = self.events.send(SessionEvent::Error {
+                    session_id: self.session_id.clone(),
+                    message: format!(
+                        "⚠️ Host key changed for {}:{} (known_hosts line {}). Possible MITM attack!",
+                        self.host, self.port, line
+                    ),
+                });
+                let _ = self.events.send(SessionEvent::HostKeyUnknown {
+                    session_id: self.session_id.clone(),
+                    host: self.host.clone(),
+                    fingerprint: fingerprint.clone(),
+                });
+                // Reject on key change — safer than silent accept
+                false
+            }
+            Err(_) => {
+                // Some other error reading known_hosts — treat as unknown
+                let _ = self.events.send(SessionEvent::HostKeyUnknown {
+                    session_id: self.session_id.clone(),
+                    host: self.host.clone(),
+                    fingerprint: fingerprint.clone(),
+                });
+                true
+            }
         };
 
-        // TODO: Implement proper known_hosts verification
-        // For now, we emit an event for the frontend to handle
-        // In production, this should:
-        // 1. Load ~/.ssh/known_hosts
-        // 2. Check if host key matches known entry
-        // 3. If new host, emit HostKeyUnknown event
-        // 4. If key changed, emit warning
-
-        // Emit unknown host event for frontend to handle
-        let _ = self.events.send(SessionEvent::HostKeyUnknown {
-            session_id: self.session_id.clone(),
-            host: self.host.clone(),
-            fingerprint,
-        });
-
-        // For development, we accept the key
-        // In production, this should return false if key is unknown
-        async move { Ok(true) }
+        async move { Ok(accepted) }
     }
 }

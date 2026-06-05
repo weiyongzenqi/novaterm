@@ -47,6 +47,7 @@ pub enum SftpCommand {
 pub enum SftpEvent {
     Connected { session_id: String },
     Entries { session_id: String, path: String, entries: Vec<RemoteEntry> },
+    #[allow(dead_code)]
     TransferProgress { session_id: String, id: String, name: String, is_upload: bool, transferred: u64, total: u64, state: u8 },
     Error { session_id: String, message: String },
     Closed { session_id: String },
@@ -55,6 +56,7 @@ pub enum SftpEvent {
 
 /// Handle to SFTP session worker.
 pub struct SftpHandle {
+    #[allow(dead_code)]
     pub session_id: String,
     pub commands: UnboundedSender<SftpCommand>,
     #[allow(dead_code)]
@@ -216,7 +218,10 @@ async fn run_sftp_session<R: Runtime>(
         ..<_>::default()
     });
 
-    let handler = SftpClientHandler;
+    let handler = SftpClientHandler {
+        host: host.clone(),
+        port,
+    };
     let addr = format!("{}:{}", host, port);
 
     let mut handle = russh::client::connect(ssh_config, addr.as_str(), handler)
@@ -228,11 +233,13 @@ async fn run_sftp_session<R: Runtime>(
             handle.authenticate_password(&username, password).await
                 .context("password authentication failed")?
         }
-        crate::ssh::AuthConfig::Key { private_key_path, passphrase: _ } => {
+        crate::ssh::AuthConfig::Key { private_key_path, passphrase } => {
             let key_content = std::fs::read_to_string(private_key_path)
                 .with_context(|| format!("failed to read key file {}", private_key_path))?;
-            let keypair = russh::keys::PrivateKey::from_openssh(key_content)
-                .context("failed to parse private key")?;
+            let keypair = russh::keys::decode_secret_key(
+                &key_content,
+                passphrase.as_deref(),
+            ).context("failed to parse private key")?;
             let key_with_hash = russh::keys::PrivateKeyWithHashAlg::new(Arc::new(keypair), None);
             handle.authenticate_publickey(&username, key_with_hash).await
                 .context("public key authentication failed")?
@@ -450,12 +457,15 @@ fn parent_dir(path: &str) -> String {
     }
 }
 
-fn emit_event<R: Runtime>(app: &AppHandle<R>, session_id: &str, event: SftpEvent) {
+fn emit_event<R: Runtime>(app: &AppHandle<R>, _session_id: &str, event: SftpEvent) {
     let _ = app.emit("sftp-event", event);
 }
 
-/// SFTP client handler (accepts any server key).
-struct SftpClientHandler;
+/// SFTP client handler with host key verification.
+struct SftpClientHandler {
+    host: String,
+    port: u16,
+}
 
 #[async_trait]
 impl Handler for SftpClientHandler {
@@ -463,8 +473,28 @@ impl Handler for SftpClientHandler {
 
     fn check_server_key(
         &mut self,
-        _server_public_key: &ssh_key::PublicKey,
+        server_public_key: &ssh_key::PublicKey,
     ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send {
-        async move { Ok(true) }
+        let host = self.host.clone();
+        let port = self.port;
+
+        async move {
+            match russh::keys::known_hosts::check_known_hosts(&host, port, server_public_key) {
+                Ok(true) => {
+                    // Key matches known_hosts, accept
+                    Ok(true)
+                }
+                Ok(false) => {
+                    // Unknown host, accept but warn (same as SSH behavior)
+                    eprintln!("Unknown host key for {}:{}", host, port);
+                    Ok(true)
+                }
+                Err(e) => {
+                    // Key changed - REJECT connection (MITM risk!)
+                    eprintln!("SECURITY WARNING: Host key changed for {}:{} - {}", host, port, e);
+                    Ok(false)
+                }
+            }
+        }
     }
 }

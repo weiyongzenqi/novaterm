@@ -17,9 +17,9 @@ export function StatusBar({ cols = 80, rows = 24, connectionStatus = 'disconnect
     : connectionStatus === 'connecting' ? t('status.connecting')
     : t('status.disconnected');
 
-  const dotColor = connectionStatus === 'connected' ? '#a6e3a1'
-    : connectionStatus === 'connecting' ? '#f9e2af'
-    : '#f38ba8';
+  const dotColor = connectionStatus === 'connected' ? '#22c55e'
+    : connectionStatus === 'connecting' ? '#eab308'
+    : '#ef4444';
 
   return (
     <footer className={styles.statusBar}>

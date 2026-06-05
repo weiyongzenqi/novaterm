@@ -72,7 +72,7 @@ export function SessionManager({
 
   const handleAddSession = useCallback(async () => {
     if (!newSession.name || !newSession.host || !newSession.username) {
-      setError('Name, host, and username are required');
+      setError(t('validation.nameHostRequired'));
       return;
     }
 
@@ -135,7 +135,7 @@ export function SessionManager({
   }, [onDeleteSession]);
 
   const formatLastUsed = (lastUsed?: string) => {
-    if (!lastUsed) return 'Never';
+    if (!lastUsed) return t('common.never');
     const date = new Date(lastUsed);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
@@ -155,7 +155,7 @@ export function SessionManager({
         <div className={styles.toolbar}>
           <input
             type="text"
-            placeholder="搜索会话..."
+            placeholder={t('session.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}
@@ -175,7 +175,7 @@ export function SessionManager({
             onClick={() => {
               // In a real app, we'd use a file dialog
               // For now, prompt for path
-              const path = prompt('Enter import file path:');
+              const path = prompt(t('session.importPath'));
               if (path) {
                 onImportSessions(path).catch(err => setError(err.message));
               }
@@ -186,7 +186,7 @@ export function SessionManager({
           <button
             className={styles.exportButton}
             onClick={() => {
-              const path = prompt('Enter export file path:');
+              const path = prompt(t('session.exportPath'));
               if (path) {
                 onExportSessions(filteredSessions, path).catch(err => setError(err.message));
               }
@@ -209,7 +209,7 @@ export function SessionManager({
                   type="text"
                   value={newSession.name}
                   onChange={(e) => setNewSession({ ...newSession, name: e.target.value })}
-                  placeholder="Session name"
+                  placeholder={t('placeholder.sessionName')}
                 />
               </div>
               <div className={styles.field}>
@@ -218,7 +218,7 @@ export function SessionManager({
                   type="text"
                   value={newSession.host}
                   onChange={(e) => setNewSession({ ...newSession, host: e.target.value })}
-                  placeholder="hostname or IP"
+                  placeholder={t('placeholder.host')}
                 />
               </div>
               <div className={styles.field}>
@@ -237,7 +237,7 @@ export function SessionManager({
                   type="text"
                   value={newSession.username}
                   onChange={(e) => setNewSession({ ...newSession, username: e.target.value })}
-                  placeholder="username"
+                  placeholder={t('placeholder.username')}
                 />
               </div>
               <div className={styles.field}>
@@ -246,8 +246,8 @@ export function SessionManager({
                   value={newSession.authType}
                   onChange={(e) => setNewSession({ ...newSession, authType: e.target.value as 'password' | 'key' })}
                 >
-                  <option value="password">Password</option>
-                  <option value="key">Private Key</option>
+                  <option value="password">{t('auth.password')}</option>
+                  <option value="key">{t('auth.privateKey')}</option>
                 </select>
               </div>
               {newSession.authType === 'key' && (
@@ -257,7 +257,7 @@ export function SessionManager({
                     type="text"
                     value={newSession.privateKeyPath}
                     onChange={(e) => setNewSession({ ...newSession, privateKeyPath: e.target.value })}
-                    placeholder="/path/to/private_key"
+                    placeholder={t('placeholder.keyPath')}
                   />
                 </div>
               )}
@@ -267,7 +267,7 @@ export function SessionManager({
                   type="text"
                   value={newSession.group}
                   onChange={(e) => setNewSession({ ...newSession, group: e.target.value })}
-                  placeholder="Optional group name"
+                  placeholder={t('placeholder.group')}
                 />
               </div>
               <div className={styles.formActions}>
@@ -325,8 +325,8 @@ export function SessionManager({
                   value={editingSession.authType}
                   onChange={(e) => setEditingSession({ ...editingSession, authType: e.target.value as 'password' | 'key' })}
                 >
-                  <option value="password">Password</option>
-                  <option value="key">Private Key</option>
+                  <option value="password">{t('auth.password')}</option>
+                  <option value="key">{t('auth.privateKey')}</option>
                 </select>
               </div>
               {editingSession.authType === 'key' && (
@@ -365,7 +365,7 @@ export function SessionManager({
           <div className={styles.confirmOverlay}>
             <div className={styles.confirmDialog}>
               <h3>{t('common.delete')}</h3>
-              <p>确定要删除此会话吗？</p>
+              <p>{t('session.confirmDelete')}</p>
               <div className={styles.confirmActions}>
                 <button onClick={() => setDeleteConfirmId(null)}>{t('common.cancel')}</button>
                 <button
@@ -393,7 +393,7 @@ export function SessionManager({
                     <th>{t('session.port')}</th>
                     <th>{t('session.username')}</th>
                     <th>{t('session.lastUsed')}</th>
-                    <th>操作</th>
+                    <th>{t('session.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -448,7 +448,7 @@ export function SessionManager({
 
           {filteredSessions.length === 0 && (
             <div className={styles.empty}>
-              {searchQuery ? '未找到匹配的会话。' : '暂无保存的会话，点击"+ 新建会话"添加。'}
+              {searchQuery ? t('session.notFound') : t('session.noSaved')}
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { Terminal } from '../../terminal';
 import { toXtermTheme, useTheme } from '../../themes';
+import { t } from '../../i18n/zh';
 import type { Tab } from '../../types/tab';
 import type { TerminalHandle } from '../../terminal';
 import styles from './TerminalArea.module.css';
@@ -73,12 +74,12 @@ export function TerminalArea({
           onSendDataRef.current?.(tabId, data);
         });
 
-        terminal.write('\x1b[1;32m已连接到服务器\x1b[0m\r\n');
+        terminal.write(`\x1b[1;32m${t('terminal.connected')}\x1b[0m\r\n`);
       } else {
         // No SSH session - local echo mode
-        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - 终端就绪\r\n`);
+        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - ${t('terminal.ready')}\r\n`);
         terminal.write(`Tab: ${tabsRef.current.get(tabId)?.title || tabId}\r\n`);
-        terminal.write(`\r\n\x1b[90m点击"新建连接"开始 SSH 会话\x1b[0m\r\n`);
+        terminal.write(`\r\n\x1b[90m${t('terminal.clickToConnect')}\x1b[0m\r\n`);
 
         // Local echo for demo
         terminal.onData((data) => {
@@ -86,7 +87,7 @@ export function TerminalArea({
         });
       }
     };
-  }, []); // 空依赖数组
+  }, []);
 
   const handleResize = useCallback((tabId: string, cols: number, rows: number) => {
     onResize?.(tabId, cols, rows);
@@ -108,12 +109,12 @@ export function TerminalArea({
           >
             {isConnecting && (
               <div className={styles.overlay}>
-                <span>连接中...</span>
+                <span>{t('common.connecting')}</span>
               </div>
             )}
             {error && (
               <div className={styles.errorOverlay}>
-                <span className={styles.errorText}>错误: {error}</span>
+                <span className={styles.errorText}>{t('common.errorPrefix')} {error}</span>
               </div>
             )}
             <Terminal

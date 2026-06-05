@@ -23,6 +23,15 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
     sftpSessionIdRef.current = sftpSessionId;
   }, [sftpSessionId]);
 
+  // Cleanup: disconnect SFTP on unmount
+  useEffect(() => {
+    return () => {
+      if (sftpSessionIdRef.current) {
+        invoke('sftp_disconnect', { sessionId: sftpSessionIdRef.current }).catch(() => {});
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const setupListener = async () => {
       unlistenRef.current = await listen<SftpSessionEvent>('sftp-event', (event) => {

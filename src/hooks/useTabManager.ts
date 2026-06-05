@@ -1,13 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { Tab, TabState, TabManagerActions } from '../types/tab';
 
-let tabIdCounter = 0;
-
-function generateTabId(): string {
-  return `tab-${++tabIdCounter}`;
-}
-
 export function useTabManager(initialTabs: Tab[] = []): TabState & TabManagerActions {
+  const tabIdCounterRef = useRef(0);
+
+  const generateTabId = useCallback((): string => {
+    tabIdCounterRef.current += 1;
+    return `tab-${tabIdCounterRef.current}`;
+  }, []);
+
   const [tabs, setTabs] = useState<Map<string, Tab>>(() => {
     const map = new Map<string, Tab>();
     if (initialTabs.length === 0) {
@@ -46,7 +47,7 @@ export function useTabManager(initialTabs: Tab[] = []): TabState & TabManagerAct
     });
     setActiveTabId(newTab.id);
     return newTab.id;
-  }, [tabs.size]);
+  }, [tabs.size, generateTabId]);
 
   const removeTab = useCallback((id: string): void => {
     setTabs((prev) => {

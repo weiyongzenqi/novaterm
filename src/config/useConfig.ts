@@ -91,31 +91,51 @@ export function useConfig(): UseConfigReturn {
       ...sessionData,
       id: generateSessionId(),
     };
-    const newConfig = {
-      ...config,
-      sessions: [...config.sessions, newSession],
-    };
-    await saveConfig(newConfig);
+    // Use functional update to avoid stale closure over config
+    setConfig(prevConfig => {
+      const newConfig = {
+        ...prevConfig,
+        sessions: [...prevConfig.sessions, newSession],
+      };
+      saveConfig(newConfig).catch(err => {
+        console.error('Failed to save config after addSession:', err);
+      });
+      return newConfig;
+    });
     return newSession;
-  }, [config, saveConfig]);
+  }, [saveConfig]);
 
   /**
    * Update an existing session.
    */
   const updateSession = useCallback(async (id: string, updates: Partial<SessionConfig>) => {
-    const newSessions = config.sessions.map(session =>
-      session.id === id ? { ...session, ...updates } : session
-    );
-    await saveConfig({ ...config, sessions: newSessions });
-  }, [config, saveConfig]);
+    // Use functional update to avoid stale closure over config
+    setConfig(prevConfig => {
+      const newSessions = prevConfig.sessions.map(session =>
+        session.id === id ? { ...session, ...updates } : session
+      );
+      const newConfig = { ...prevConfig, sessions: newSessions };
+      saveConfig(newConfig).catch(err => {
+        console.error('Failed to save config after updateSession:', err);
+      });
+      return newConfig;
+    });
+  }, [saveConfig]);
 
   /**
    * Delete a session by ID.
    */
   const deleteSession = useCallback(async (id: string) => {
-    const newSessions = config.sessions.filter(session => session.id !== id);
-    await saveConfig({ ...config, sessions: newSessions });
-  }, [config, saveConfig]);
+    // Use functional update to avoid stale closure over config
+    setConfig(prevConfig => {
+      const newSessions = prevConfig.sessions.filter(session => session.id !== id);
+      const newConfig = { ...prevConfig, sessions: newSessions };
+      saveConfig(newConfig).catch(err => {
+        console.error('Failed to save config after deleteSession:', err);
+      });
+      return newConfig;
+    });
+  }, [saveConfig]);
 
   /**
    * Get a session by ID.

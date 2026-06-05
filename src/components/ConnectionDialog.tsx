@@ -33,6 +33,8 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
       setPort(String(initialConfig.port || 22));
       setUsername(initialConfig.username || '');
       setAuthType(initialConfig.authType === 'key' ? 'Key' : 'Password');
+      setPassword('');         // Reset password when switching sessions
+      setPrivateKeyPath('');   // Reset private key path when switching sessions
     }
   }, [initialConfig]);
 
@@ -43,7 +45,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
 
     const portNum = parseInt(port, 10);
     if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-      setError('Invalid port number');
+      setError(t('validation.invalidPort'));
       setIsConnecting(false);
       return;
     }
@@ -51,14 +53,14 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
     let auth: AuthConfig;
     if (authType === 'Password') {
       if (!password) {
-        setError('Password is required');
+        setError(t('validation.passwordRequired'));
         setIsConnecting(false);
         return;
       }
       auth = { type: 'Password', password };
     } else {
       if (!privateKeyPath) {
-        setError('Private key path is required');
+        setError(t('validation.keyPathRequired'));
         setIsConnecting(false);
         return;
       }
@@ -102,7 +104,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
               type="text"
               value={host}
               onChange={(e) => setHost(e.target.value)}
-              placeholder="hostname or IP"
+              placeholder={t('placeholder.hostname')}
               required
             />
           </div>
@@ -127,7 +129,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="username"
+              placeholder={t('placeholder.username')}
               required
             />
           </div>
@@ -139,8 +141,8 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
               value={authType}
               onChange={(e) => setAuthType(e.target.value as 'Password' | 'Key')}
             >
-              <option value="Password">Password</option>
-              <option value="Key">Private Key</option>
+              <option value="Password">{t('auth.password')}</option>
+              <option value="Key">{t('auth.privateKey')}</option>
             </select>
           </div>
 
@@ -152,7 +154,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
+              placeholder={t('placeholder.password')}
                 required={authType === 'Password'}
               />
             </div>
@@ -166,10 +168,10 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
                 type="text"
                 value={privateKeyPath}
                 onChange={(e) => setPrivateKeyPath(e.target.value)}
-                placeholder="/path/to/private_key"
+              placeholder={t('placeholder.keyPath')}
                 required={authType === 'Key'}
               />
-              <span className={styles.hint}>e.g., ~/.ssh/id_rsa</span>
+              <span className={styles.hint}>{t('placeholder.keyHint')}</span>
             </div>
           )}
 

@@ -75,18 +75,20 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
 
     const fitAddon = new FitAddon();
     const searchAddon = new SearchAddon();
-    const webglAddon = new WebglAddon();
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(searchAddon);
 
     terminal.open(terminalRef.current);
 
-    // Try to enable WebGL renderer
+    // Try to enable WebGL renderer with safe error handling
+    let webglAddon: WebglAddon | undefined;
     try {
+      webglAddon = new WebglAddon();
       terminal.loadAddon(webglAddon);
     } catch (e) {
-      console.warn('WebGL renderer not available, falling back to canvas:', e);
+      console.warn('WebGL addon failed to load:', e);
+      webglAddon = undefined;
     }
 
     // Initial fit
@@ -121,7 +123,7 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     return () => {
       resizeObserver.disconnect();
       dataDisposable?.dispose();
-      webglAddon.dispose();
+      webglAddon?.dispose();
       searchAddon.dispose();
       fitAddon.dispose();
       terminal.dispose();

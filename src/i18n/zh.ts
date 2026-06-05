@@ -40,6 +40,7 @@ export const zh = {
   'sftp.hide': '隐藏 SFTP',
   'sftp.show': '显示 SFTP',
   'sftp.upload': '上传',
+  'sftp.selectUploadFile': '选择要上传的文件',
   'sftp.download': '下载',
   'sftp.delete': '删除',
   'sftp.newFolder': '新建文件夹',
@@ -70,6 +71,44 @@ export const zh = {
   'session.lastUsed': '上次使用',
   'session.export': '导出',
   'session.import': '导入',
+  'session.search': '搜索会话...',
+  'session.confirmDelete': '确定要删除此会话吗？',
+  'session.actions': '操作',
+  'session.notFound': '未找到匹配的会话。',
+  'session.noSaved': '暂无保存的会话，点击"+ 新建会话"添加。',
+  'common.connecting': '连接中...',
+  'common.errorPrefix': '错误:',
+  'dialog.saveFile': '保存文件',
+  'folder.inputName': '请输入文件夹名称:',
+
+  // ConnectionDialog 相关
+  'validation.invalidPort': '端口号无效',
+  'validation.passwordRequired': '请输入密码',
+  'validation.keyPathRequired': '请输入私钥路径',
+  'placeholder.hostname': '主机名或 IP',
+  'placeholder.password': '密码',
+  'auth.password': '密码认证',
+  'auth.privateKey': '私钥认证',
+  'placeholder.keyPath': '/path/to/private_key',
+  'placeholder.keyHint': '支持 OpenSSH、PEM 格式',
+
+  // SessionManager 相关
+  'validation.nameHostRequired': '名称、主机和用户名为必填项',
+  'common.never': '从未',
+  'session.importPath': '请输入导入文件路径:',
+  'session.exportPath': '请输入导出文件路径:',
+  'placeholder.sessionName': '会话名称',
+  'placeholder.host': 'hostname 或 IP',
+  'placeholder.username': '用户名',
+  'placeholder.port': '端口',
+  'placeholder.group': '分组（可选）',
+  'placeholder.privateKeyPath': '私钥路径（Key认证时必填）',
+
+  // ThemeSelector 相关
+  'theme.label': '主题',
+
+  // AppLayout 相关
+  'sftp.prefix': 'SFTP - ',
 } as const;
 
 export type TranslationKey = keyof typeof zh;

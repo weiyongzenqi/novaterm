@@ -9,7 +9,8 @@ import { SessionManager } from '../SessionManager';
 import { useTabManager } from '../../hooks/useTabManager';
 import { useMultiSSH, useSFTP } from '../../ssh';
 import { useConfig } from '../../config';
-import { save } from '@tauri-apps/plugin-dialog';
+import { t } from '../../i18n/zh';
+import { save, open } from '@tauri-apps/plugin-dialog';
 import type { SSHConfig, RemoteEntry } from '../../ssh';
 import type { SessionConfig } from '../../config';
 import type { ConnectionDialogProps } from '../ConnectionDialog';
@@ -165,7 +166,7 @@ export function AppLayout() {
     try {
       const savePath = await save({
         defaultPath: entry.name,
-        title: '保存文件',
+        title: t('dialog.saveFile'),
       });
       if (savePath) {
         const lastSlash = savePath.lastIndexOf('/') !== -1 ? savePath.lastIndexOf('/') : savePath.lastIndexOf('\\');
@@ -178,18 +179,26 @@ export function AppLayout() {
   }, [sftp]);
 
   const handleSftpUpload = useCallback(async () => {
-    // Note: In a real implementation, we would use a file picker
-    // For now, placeholder
-    // eslint-disable-next-line no-console
-    console.log('Upload triggered');
-  }, []);
+    try {
+      const selected = await open({
+        multiple: false,
+        title: t('sftp.selectUploadFile'),
+      });
+      if (selected) {
+        const filePath = typeof selected === 'string' ? selected : selected;
+        await sftp.upload(filePath, sftp.currentPath);
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+    }
+  }, [sftp]);
 
   const handleSftpDelete = useCallback(async (entry: RemoteEntry) => {
     sftp.deleteFile(entry.fullPath);
   }, [sftp]);
 
   const handleSftpMkdir = useCallback(async () => {
-    const name = prompt('请输入文件夹名称:');
+    const name = prompt(t('folder.inputName'));
     if (name && name.trim()) {
       const path = `${sftp.currentPath}/${name.trim()}`;
       sftp.mkdir(path);
@@ -230,7 +239,7 @@ export function AppLayout() {
           {showSftpPanel && activeConfig && (
             <div className={styles.sftpContainer}>
               <div className={styles.sftpHeader}>
-                <span>SFTP - {activeConfig.username}@{activeConfig.host}</span>
+                <span>{t('sftp.prefix')}{activeConfig.username}@{activeConfig.host}</span>
                 <button className={styles.closeButton} onClick={() => setShowSftpPanel(false)}>
                   ✕
                 </button>
@@ -256,9 +265,9 @@ export function AppLayout() {
           <button
             className={styles.sftpToggle}
             onClick={handleToggleSftp}
-            title={showSftpPanel ? '隐藏 SFTP' : '显示 SFTP'}
+            title={showSftpPanel ? t('sftp.hide') : t('sftp.show')}
           >
-            📁 {showSftpPanel ? '隐藏 SFTP' : 'SFTP'}
+            📁 {showSftpPanel ? t('sftp.hide') : t('sftp.show')}
           </button>
         </StatusBar>
       </div>
