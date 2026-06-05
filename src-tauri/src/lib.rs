@@ -20,6 +20,7 @@ pub fn run() {
             commands::ssh_send_data,
             commands::ssh_resize,
             commands::ssh_accept_host_key,
+            commands::ssh_reject_host_key,
             commands::sftp_connect,
             commands::sftp_disconnect,
             commands::sftp_list_dir,

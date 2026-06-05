@@ -82,6 +82,18 @@ pub async fn ssh_accept_host_key(
         .map_err(|e| format!("{:#}", e))
 }
 
+/// Reject an unknown host key.
+#[tauri::command]
+pub async fn ssh_reject_host_key(
+    manager: State<'_, SSHManager>,
+    session_id: String,
+) -> Result<(), String> {
+    manager
+        .reject_host_key(&session_id)
+        .await
+        .map_err(|e| format!("{:#}", e))
+}
+
 // ==================== SFTP Commands ====================
 
 /// Connect to an SFTP session.

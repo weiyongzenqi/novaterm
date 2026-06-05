@@ -6,6 +6,7 @@ import { TerminalArea } from './TerminalArea';
 import { SftpPanel } from '../SftpPanel';
 import { ConnectionDialog } from '../ConnectionDialog';
 import { SessionManager } from '../SessionManager';
+import { HostKeyConfirm } from '../HostKeyConfirm';
 import { useTabManager } from '../../hooks/useTabManager';
 import { useMultiSSH, useSFTP } from '../../ssh';
 import { useConfig } from '../../config';
@@ -291,6 +292,7 @@ export function AppLayout() {
         onImportSessions={importSessions}
         onExportSessions={exportSessions}
       />
+      <HostKeyConfirm />
     </div>
   );
 }

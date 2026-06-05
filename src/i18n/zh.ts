@@ -109,6 +109,14 @@ export const zh = {
 
   // AppLayout 相关
   'sftp.prefix': 'SFTP - ',
+
+  // Host Key 确认
+  'hostKey.title': '主机密钥验证',
+  'hostKey.message': '首次连接到 {host}，无法验证主机密钥的真实性。',
+  'hostKey.fingerprint': '密钥指纹',
+  'hostKey.warning': '如果你信任此主机，请点击"信任并连接"。如果你担心安全风险，请点击"取消"。',
+  'hostKey.accept': '信任并连接',
+  'hostKey.reject': '取消',
 } as const;
 
 export type TranslationKey = keyof typeof zh;

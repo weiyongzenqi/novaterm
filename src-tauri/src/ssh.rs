@@ -12,7 +12,7 @@ use russh::client::Handler;
 use russh::keys::ssh_key;
 use russh::{ChannelMsg, Disconnect};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tokio::sync::RwLock;
+use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::{timeout, Duration};
 
@@ -98,12 +98,14 @@ impl SessionHandle {
 /// Global SSH session manager.
 pub struct SSHManager {
     sessions: Arc<RwLock<HashMap<String, SessionHandle>>>,
+    pending_host_keys: Arc<RwLock<HashMap<String, oneshot::Sender<bool>>>>,
 }
 
 impl SSHManager {
     pub fn new() -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
+            pending_host_keys: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -129,15 +131,26 @@ impl SSHManager {
         let session_id_for_session = session_id.clone();
         let session_id_for_cleanup = session_id.clone();
         let session_id_for_error = session_id.clone();
+        let session_id_for_hostkey = session_id.clone();
 
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<SessionCommand>();
         let (evt_tx, evt_rx) = mpsc::unbounded_channel::<SessionEvent>();
+
+        // Create oneshot channel for host key confirmation
+        let (host_key_tx, host_key_rx) = oneshot::channel::<bool>();
+
+        // Store the sender in pending_host_keys for frontend to respond
+        self.pending_host_keys
+            .write()
+            .await
+            .insert(session_id_for_hostkey.clone(), host_key_tx);
 
         // Forward events to frontend
         let app_for_forward = app.clone();
         tokio::spawn(forward_events(app_for_forward, session_id_for_forward, evt_rx));
 
         let sessions_ref = self.sessions.clone();
+        let pending_ref = self.pending_host_keys.clone();
         let app_for_session = app.clone();
         let join = tokio::spawn(async move {
             let result = run_session(
@@ -148,10 +161,14 @@ impl SSHManager {
                 evt_tx.clone(),
                 cols,
                 rows,
+                host_key_rx,
             ).await;
 
             // Remove session from manager when done
             sessions_ref.write().await.remove(&session_id_for_cleanup);
+
+            // Clean up pending host key if still present (e.g., on error)
+            pending_ref.write().await.remove(&session_id_for_cleanup);
 
             if let Err(e) = &result {
                 let _ = evt_tx.send(SessionEvent::Error {
@@ -208,10 +225,26 @@ impl SSHManager {
         Ok(())
     }
 
-    /// Accept an unknown host key (placeholder for future implementation).
-    pub async fn accept_host_key(&self, _session_id: &str) -> Result<()> {
-        // TODO: Implement proper known_hosts update
-        Ok(())
+    /// Accept an unknown host key.
+    pub async fn accept_host_key(&self, session_id: &str) -> Result<()> {
+        let mut pending = self.pending_host_keys.write().await;
+        if let Some(tx) = pending.remove(session_id) {
+            let _ = tx.send(true);
+            Ok(())
+        } else {
+            Err(anyhow!("no pending host key confirmation for session {}", session_id))
+        }
+    }
+
+    /// Reject an unknown host key.
+    pub async fn reject_host_key(&self, session_id: &str) -> Result<()> {
+        let mut pending = self.pending_host_keys.write().await;
+        if let Some(tx) = pending.remove(session_id) {
+            let _ = tx.send(false);
+            Ok(())
+        } else {
+            Err(anyhow!("no pending host key confirmation for session {}", session_id))
+        }
     }
 }
 
@@ -241,6 +274,7 @@ async fn run_session<R: Runtime>(
     events: UnboundedSender<SessionEvent>,
     initial_cols: u32,
     initial_rows: u32,
+    host_key_rx: oneshot::Receiver<bool>,
 ) -> Result<()> {
     // Create SSH client config
     let ssh_config = Arc::new(russh::client::Config {
@@ -254,6 +288,7 @@ async fn run_session<R: Runtime>(
         port: config.port,
         events: events.clone(),
         session_id: session_id.clone(),
+        host_key_rx: Some(host_key_rx),
     };
 
     let addr = format!("{}:{}", config.host, config.port);
@@ -413,6 +448,7 @@ struct ClientHandler {
     port: u16,  // reserved for future known_hosts per-port lookups
     events: UnboundedSender<SessionEvent>,
     session_id: String,
+    host_key_rx: Option<oneshot::Receiver<bool>>,
 }
 
 #[async_trait]
@@ -447,8 +483,19 @@ impl Handler for ClientHandler {
                     host: self.host.clone(),
                     fingerprint: fingerprint.clone(),
                 });
-                // Accept for now (frontend confirm flow TBD)
-                true
+
+                // Wait for user confirmation (blocking, max 30 seconds)
+                if let Some(rx) = self.host_key_rx.take() {
+                    // Use futures::executor::block_on to wait for oneshot result
+                    match futures::executor::block_on(
+                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
+                    ) {
+                        Ok(Ok(true)) => true,
+                        _ => false,
+                    }
+                } else {
+                    false
+                }
             }
             Err(russh::keys::Error::KeyChanged { line }) => {
                 // Key changed! Emit warning — possible MITM attack
@@ -464,8 +511,18 @@ impl Handler for ClientHandler {
                     host: self.host.clone(),
                     fingerprint: fingerprint.clone(),
                 });
-                // Reject on key change — safer than silent accept
-                false
+
+                // Wait for user confirmation (blocking, max 30 seconds)
+                if let Some(rx) = self.host_key_rx.take() {
+                    match futures::executor::block_on(
+                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
+                    ) {
+                        Ok(Ok(user_accepted)) => user_accepted,
+                        _ => false,
+                    }
+                } else {
+                    false
+                }
             }
             Err(_) => {
                 // Some other error reading known_hosts — treat as unknown
@@ -474,7 +531,18 @@ impl Handler for ClientHandler {
                     host: self.host.clone(),
                     fingerprint: fingerprint.clone(),
                 });
-                true
+
+                // Wait for user confirmation (blocking, max 30 seconds)
+                if let Some(rx) = self.host_key_rx.take() {
+                    match futures::executor::block_on(
+                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
+                    ) {
+                        Ok(Ok(true)) => true,
+                        _ => false,
+                    }
+                } else {
+                    false
+                }
             }
         };
 
