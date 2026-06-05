@@ -14,6 +14,7 @@ use russh::{ChannelMsg, Disconnect};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use tokio::time::{timeout, Duration};
 
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -257,9 +258,11 @@ async fn run_session<R: Runtime>(
 
     let addr = format!("{}:{}", config.host, config.port);
 
-    // Connect to server
-    let mut handle = russh::client::connect(ssh_config, addr.as_str(), handler)
+    // Connect to server with 15 second timeout
+    let connect_future = russh::client::connect(ssh_config, addr.as_str(), handler);
+    let mut handle = timeout(Duration::from_secs(15), connect_future)
         .await
+        .with_context(|| format!("connection timeout to {}", addr))?
         .with_context(|| format!("connection failed to {}", addr))?;
 
     // Authenticate

@@ -89,7 +89,7 @@ export function useMultiSSH(): MultiSSHState {
     try {
       const cols = 80;
       const rows = 24;
-      const sessionId = await invoke<string>('ssh_connect', {
+      const invokePromise = invoke<string>('ssh_connect', {
         host: config.host,
         port: config.port,
         username: config.username,
@@ -97,6 +97,10 @@ export function useMultiSSH(): MultiSSHState {
         cols,
         rows,
       });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout (15s)')), 15000);
+      });
+      const sessionId = await Promise.race([invokePromise, timeoutPromise]);
 
       setSessions(prev => {
         const newMap = new Map(prev);
