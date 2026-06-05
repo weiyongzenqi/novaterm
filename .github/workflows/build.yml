@@ -16,41 +16,41 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            ext: deb
           - platform: macos-latest
-            target: aarch64-apple-darwin
-            ext: dmg
+            args: '--target aarch64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
           - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            ext: msi
+            args: ''
 
     runs-on: ${{ matrix.platform }}
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Install dependencies (ubuntu only)
+      if: matrix.platform == 'ubuntu-22.04'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+    - name: Setup node
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: lts/*
+
+    - name: Configure npm to use official registry
+      run: npm config set registry https://registry.npmjs.org/
 
     - name: Install Rust stable
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: ${{ matrix.target }}
+        targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
-    - name: Install dependencies (ubuntu)
-      if: matrix.platform == 'ubuntu-22.04'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
-
-    - name: Install dependencies (macos)
-      if: matrix.platform == 'macos-latest'
-      run: |
-        brew install openssl@3
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './src-tauri -> target'
 
     - name: Install frontend dependencies
       run: npm ci
@@ -73,4 +73,4 @@ jobs:
           - 会话配置持久化
         releaseDraft: false
         prerelease: false
-        args: --target ${{ matrix.target }}
+        args: ${{ matrix.args }}
