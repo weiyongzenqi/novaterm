@@ -91,51 +91,49 @@ export function useConfig(): UseConfigReturn {
       ...sessionData,
       id: generateSessionId(),
     };
-    // Use functional update to avoid stale closure over config
-    setConfig(prevConfig => {
-      const newConfig = {
-        ...prevConfig,
-        sessions: [...prevConfig.sessions, newSession],
-      };
-      saveConfig(newConfig).catch(err => {
-        console.error('Failed to save config after addSession:', err);
-      });
-      return newConfig;
+    // Calculate new config
+    const newConfig = {
+      ...config,
+      sessions: [...config.sessions, newSession],
+    };
+    // Update state
+    setConfig(newConfig);
+    // Save to disk (async, don't wait)
+    saveConfig(newConfig).catch(err => {
+      console.error('Failed to save config after addSession:', err);
     });
     return newSession;
-  }, [saveConfig]);
+  }, [config, saveConfig]);
 
   /**
    * Update an existing session.
    */
   const updateSession = useCallback(async (id: string, updates: Partial<SessionConfig>) => {
-    // Use functional update to avoid stale closure over config
-    setConfig(prevConfig => {
-      const newSessions = prevConfig.sessions.map(session =>
-        session.id === id ? { ...session, ...updates } : session
-      );
-      const newConfig = { ...prevConfig, sessions: newSessions };
-      saveConfig(newConfig).catch(err => {
-        console.error('Failed to save config after updateSession:', err);
-      });
-      return newConfig;
+    const newSessions = config.sessions.map(session =>
+      session.id === id ? { ...session, ...updates } : session
+    );
+    const newConfig = { ...config, sessions: newSessions };
+    // Update state
+    setConfig(newConfig);
+    // Save to disk (async, don't wait)
+    saveConfig(newConfig).catch(err => {
+      console.error('Failed to save config after updateSession:', err);
     });
-  }, [saveConfig]);
+  }, [config, saveConfig]);
 
   /**
    * Delete a session by ID.
    */
   const deleteSession = useCallback(async (id: string) => {
-    // Use functional update to avoid stale closure over config
-    setConfig(prevConfig => {
-      const newSessions = prevConfig.sessions.filter(session => session.id !== id);
-      const newConfig = { ...prevConfig, sessions: newSessions };
-      saveConfig(newConfig).catch(err => {
-        console.error('Failed to save config after deleteSession:', err);
-      });
-      return newConfig;
+    const newSessions = config.sessions.filter(session => session.id !== id);
+    const newConfig = { ...config, sessions: newSessions };
+    // Update state
+    setConfig(newConfig);
+    // Save to disk (async, don't wait)
+    saveConfig(newConfig).catch(err => {
+      console.error('Failed to save config after deleteSession:', err);
     });
-  }, [saveConfig]);
+  }, [config, saveConfig]);
 
   /**
    * Get a session by ID.

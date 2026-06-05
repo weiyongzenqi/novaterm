@@ -153,6 +153,7 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
         localPath,
         remoteDir,
       });
+      setLoading(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);

@@ -13,12 +13,19 @@ export function useSSH(): UseSSHReturn {
   const outputCallbacksRef = useRef<Set<(data: string) => void>>(new Set());
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
-  // Listen to SSH events from backend
+  // Keep ref in sync with sessionId for event listener
+  const sessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  // Listen to SSH events from backend - register once with empty deps
   useEffect(() => {
     const setupListener = async () => {
       unlistenRef.current = await listen<SSHSessionEvent>('ssh-event', (event) => {
         const payload = event.payload;
-        if (payload.sessionId !== sessionId) return;
+        // Filter by sessionId using ref to avoid re-registering listener
+        if (payload.sessionId !== sessionIdRef.current) return;
 
         switch (payload.type) {
           case 'connected':
@@ -51,7 +58,7 @@ export function useSSH(): UseSSHReturn {
         unlistenRef.current();
       }
     };
-  }, [sessionId]);
+  }, []);
 
   const connect = useCallback(async (config: SSHConfig): Promise<string> => {
     setStatus('connecting');

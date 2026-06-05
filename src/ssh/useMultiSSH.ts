@@ -100,7 +100,9 @@ export function useMultiSSH(): MultiSSHState {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Connection timeout (15s)')), 15000);
       });
-      const sessionId = await Promise.race([invokePromise, timeoutPromise]);
+
+      const result = await Promise.race([invokePromise, timeoutPromise]);
+      const sessionId = result;
 
       setSessions(prev => {
         const newMap = new Map(prev);
@@ -114,6 +116,19 @@ export function useMultiSSH(): MultiSSHState {
       return sessionId;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+
+      // On timeout, try to disconnect any pending backend session
+      // The backend may have started a session even if frontend timed out
+      try {
+        // Get any session that might have been created for this tab
+        const state = sessionsRef.current.get(tabId);
+        if (state?.sessionId) {
+          await invoke('ssh_disconnect', { sessionId: state.sessionId });
+        }
+      } catch {
+        // Ignore disconnect errors during cleanup
+      }
+
       setSessions(prev => {
         const newMap = new Map(prev);
         newMap.set(tabId, { sessionId: null, status: 'disconnected', error: message });

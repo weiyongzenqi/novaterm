@@ -18,16 +18,20 @@ interface PendingHostKey {
 }
 
 export function HostKeyConfirm() {
-  const [pending, setPending] = useState<PendingHostKey | null>(null);
+  const [pendingKeys, setPendingKeys] = useState<Map<string, PendingHostKey>>(new Map());
 
   useEffect(() => {
     const unlisten = listen<HostKeyUnknownPayload>('ssh-event', (event) => {
       const payload = event.payload;
       if (payload.type === 'hostKeyUnknown') {
-        setPending({
-          sessionId: payload.sessionId,
-          host: payload.host,
-          fingerprint: payload.fingerprint,
+        setPendingKeys(prev => {
+          const newMap = new Map(prev);
+          newMap.set(payload.sessionId, {
+            sessionId: payload.sessionId,
+            host: payload.host,
+            fingerprint: payload.fingerprint,
+          });
+          return newMap;
         });
       }
     });
@@ -36,27 +40,40 @@ export function HostKeyConfirm() {
     };
   }, []);
 
+  // Get the first pending key to display
+  const currentPending = pendingKeys.size > 0
+    ? Array.from(pendingKeys.values())[0]
+    : null;
+
   const handleAccept = async () => {
-    if (!pending) return;
+    if (!currentPending) return;
     try {
-      await invoke('ssh_accept_host_key', { sessionId: pending.sessionId });
+      await invoke('ssh_accept_host_key', { sessionId: currentPending.sessionId });
     } catch (err) {
       console.error('accept host key failed:', err);
     }
-    setPending(null);
+    setPendingKeys(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(currentPending.sessionId);
+      return newMap;
+    });
   };
 
   const handleReject = async () => {
-    if (!pending) return;
+    if (!currentPending) return;
     try {
-      await invoke('ssh_reject_host_key', { sessionId: pending.sessionId });
+      await invoke('ssh_reject_host_key', { sessionId: currentPending.sessionId });
     } catch (err) {
       console.error('reject host key failed:', err);
     }
-    setPending(null);
+    setPendingKeys(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(currentPending.sessionId);
+      return newMap;
+    });
   };
 
-  if (!pending) return null;
+  if (!currentPending) return null;
 
   return (
     <div className={styles.overlay}>
@@ -66,11 +83,11 @@ export function HostKeyConfirm() {
         </div>
         <div className={styles.body}>
           <p className={styles.message}>
-            {t('hostKey.message').replace('{host}', pending.host)}
+            {t('hostKey.message').replace('{host}', currentPending.host)}
           </p>
           <div className={styles.fingerprint}>
             <span className={styles.label}>{t('hostKey.fingerprint')}:</span>
-            <code className={styles.code}>{pending.fingerprint}</code>
+            <code className={styles.code}>{currentPending.fingerprint}</code>
           </div>
           <p className={styles.warning}>{t('hostKey.warning')}</p>
         </div>

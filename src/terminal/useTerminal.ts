@@ -10,12 +10,14 @@ import '@xterm/xterm/css/xterm.css';
 
 interface UseTerminalOptions {
   theme?: ITheme;
+  fontSize?: number;
+  fontFamily?: string;
   onData?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
 }
 
 export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn {
-  const { theme, onData, onResize } = options;
+  const { theme, fontSize = 14, fontFamily = '"Fira Code", "JetBrains Mono", monospace', onData, onResize } = options;
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstanceRef = useRef<Terminal | null>(null);
@@ -64,8 +66,8 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     if (!terminalRef.current) return;
 
     const terminal = new Terminal({
-      fontFamily: '"Fira Code", "JetBrains Mono", monospace',
-      fontSize: 14,
+      fontFamily,
+      fontSize,
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: 'block',

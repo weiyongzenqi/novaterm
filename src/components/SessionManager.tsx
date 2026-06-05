@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import type { SessionConfig } from '../config';
 import { t } from '../i18n/zh';
 import styles from './SessionManager.module.css';
@@ -172,12 +173,18 @@ export function SessionManager({
           </button>
           <button
             className={styles.importButton}
-            onClick={() => {
-              // In a real app, we'd use a file dialog
-              // For now, prompt for path
-              const path = prompt(t('session.importPath'));
-              if (path) {
-                onImportSessions(path).catch(err => setError(err.message));
+            onClick={async () => {
+              try {
+                const path = await open({
+                  multiple: false,
+                  filters: [{ name: 'JSON', extensions: ['json'] }],
+                  title: t('session.import'),
+                });
+                if (path && typeof path === 'string') {
+                  await onImportSessions(path);
+                }
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
               }
             }}
           >
@@ -185,10 +192,18 @@ export function SessionManager({
           </button>
           <button
             className={styles.exportButton}
-            onClick={() => {
-              const path = prompt(t('session.exportPath'));
-              if (path) {
-                onExportSessions(filteredSessions, path).catch(err => setError(err.message));
+            onClick={async () => {
+              try {
+                const path = await save({
+                  filters: [{ name: 'JSON', extensions: ['json'] }],
+                  defaultPath: 'sessions.json',
+                  title: t('session.export'),
+                });
+                if (path) {
+                  await onExportSessions(filteredSessions, path);
+                }
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err));
               }
             }}
           >

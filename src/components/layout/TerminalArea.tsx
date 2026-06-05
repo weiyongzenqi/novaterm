@@ -28,6 +28,7 @@ export function TerminalArea({
   const { currentTheme } = useTheme();
   const terminalRefs = useRef<Map<string, TerminalHandle>>(new Map());
   const outputUnsubsRef = useRef<Map<string, () => void>>(new Map());
+  const dataDisposablesRef = useRef<Map<string, { dispose: () => void }>>(new Map());
 
   // Set up output listeners for each tab
   useEffect(() => {
@@ -52,6 +53,12 @@ export function TerminalArea({
         if (!tabs.has(tabId)) {
           unsubs();
           outputUnsubsRef.current.delete(tabId);
+          // Also clean up onData disposable
+          const disposable = dataDisposablesRef.current.get(tabId);
+          if (disposable) {
+            disposable.dispose();
+            dataDisposablesRef.current.delete(tabId);
+          }
         }
       });
     };
@@ -66,13 +73,18 @@ export function TerminalArea({
 
   const handleTerminalReady = useCallback((tabId: string) => {
     return (terminal: import('@xterm/xterm').Terminal) => {
+      // Dispose existing onData listener before registering new one
+      const existing = dataDisposablesRef.current.get(tabId);
+      if (existing) existing.dispose();
+
       const status = connectionStatusRef.current?.get(tabId);
 
       if (status === 'connected') {
         // SSH session exists - set up data handling
-        terminal.onData((data) => {
+        const disposable = terminal.onData((data) => {
           onSendDataRef.current?.(tabId, data);
         });
+        dataDisposablesRef.current.set(tabId, disposable);
 
         terminal.write(`\x1b[1;32m${t('terminal.connected')}\x1b[0m\r\n`);
       } else {
@@ -82,9 +94,10 @@ export function TerminalArea({
         terminal.write(`\r\n\x1b[90m${t('terminal.clickToConnect')}\x1b[0m\r\n`);
 
         // Local echo for demo
-        terminal.onData((data) => {
+        const disposable = terminal.onData((data) => {
           terminal.write(data);
         });
+        dataDisposablesRef.current.set(tabId, disposable);
       }
     };
   }, []);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Sidebar } from './Sidebar';
 import { TabBar } from './TabBar';
 import { StatusBar } from './StatusBar';
@@ -133,17 +133,25 @@ export function AppLayout() {
     resize(tabId, cols, rows);
   }, [resize]);
 
-  // Build connection status map for TerminalArea
-  const connectionStatus = new Map<string, 'disconnected' | 'connecting' | 'connected'>();
-  const connectionErrors = new Map<string, string>();
+  // Build connection status map for TerminalArea - memoize to avoid recreating every render
+  const connectionStatus = useMemo(() => {
+    const map = new Map<string, 'disconnected' | 'connecting' | 'connected'>();
+    tabs.forEach((_, tabId) => {
+      map.set(tabId, getStatus(tabId));
+    });
+    return map;
+  }, [tabs, getStatus]);
 
-  tabs.forEach((_, tabId) => {
-    connectionStatus.set(tabId, getStatus(tabId));
-    const error = getError(tabId);
-    if (error) {
-      connectionErrors.set(tabId, error);
-    }
-  });
+  const connectionErrors = useMemo(() => {
+    const map = new Map<string, string>();
+    tabs.forEach((_, tabId) => {
+      const error = getError(tabId);
+      if (error) {
+        map.set(tabId, error);
+      }
+    });
+    return map;
+  }, [tabs, getError]);
 
   // Handle new tab button click
   const handleNewTab = useCallback(() => {
@@ -186,7 +194,7 @@ export function AppLayout() {
         title: t('sftp.selectUploadFile'),
       });
       if (selected) {
-        const filePath = typeof selected === 'string' ? selected : selected;
+        const filePath = String(selected);
         await sftp.upload(filePath, sftp.currentPath);
       }
     } catch (err) {

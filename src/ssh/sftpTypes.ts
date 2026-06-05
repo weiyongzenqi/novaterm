@@ -2,6 +2,10 @@
  * SFTP related types.
  */
 
+import type { AuthConfig } from './types';
+
+export type { AuthConfig };
+
 /** Remote file entry */
 export interface RemoteEntry {
   name: string;
@@ -68,8 +72,3 @@ export interface SftpConfig {
   username: string;
   auth: AuthConfig;
 }
-
-/** Authentication configuration */
-export type AuthConfig =
-  | { type: 'password'; password: string }
-  | { type: 'key'; privateKeyPath: string; passphrase?: string };

@@ -19,6 +19,7 @@ use tokio::time::{timeout, Duration};
 use tauri::{AppHandle, Emitter, Runtime};
 
 /// Authentication configuration for SSH connection.
+/// TODO: Implement zeroize for password field to securely clear memory after use
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum AuthConfig {
@@ -139,6 +140,9 @@ impl SSHManager {
         // Create oneshot channel for host key confirmation
         let (host_key_tx, host_key_rx) = oneshot::channel::<bool>();
 
+        // Create oneshot channel to signal handle insertion complete
+        let (ready_tx, ready_rx) = oneshot::channel();
+
         // Store the sender in pending_host_keys for frontend to respond
         self.pending_host_keys
             .write()
@@ -153,6 +157,9 @@ impl SSHManager {
         let pending_ref = self.pending_host_keys.clone();
         let app_for_session = app.clone();
         let join = tokio::spawn(async move {
+            // Wait for handle to be inserted before starting session
+            let _ = ready_rx.await;
+
             let result = run_session(
                 app_for_session,
                 session_id_for_session,
@@ -187,6 +194,9 @@ impl SSHManager {
         };
 
         self.sessions.write().await.insert(session_id_for_handle.clone(), handle);
+
+        // Signal that handle is ready for cleanup
+        let _ = ready_tx.send(());
 
         Ok(session_id_for_handle)
     }
@@ -459,93 +469,53 @@ impl Handler for ClientHandler {
         &mut self,
         server_public_key: &ssh_key::PublicKey,
     ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send {
-        // Build fingerprint string
         let fingerprint = server_public_key
             .fingerprint(Default::default())
             .to_string();
 
-        // Check against known_hosts
         let known = russh::keys::known_hosts::check_known_hosts(
             &self.host,
             self.port,
             server_public_key,
         );
 
-        let accepted = match known {
-            Ok(true) => {
-                // Key is known and matches — accept silently
+        let needs_confirmation = match &known {
+            Ok(true) => false,
+            _ => {
+                // Unknown or changed host - needs confirmation
+                if let Err(russh::keys::Error::KeyChanged { line }) = &known {
+                    let _ = self.events.send(SessionEvent::Error {
+                        session_id: self.session_id.clone(),
+                        message: format!(
+                            "⚠️ Host key changed for {}:{} (known_hosts line {}). Possible MITM attack!",
+                            self.host, self.port, line
+                        ),
+                    });
+                }
+                let _ = self.events.send(SessionEvent::HostKeyUnknown {
+                    session_id: self.session_id.clone(),
+                    host: self.host.clone(),
+                    fingerprint: fingerprint.clone(),
+                });
                 true
-            }
-            Ok(false) => {
-                // Unknown host — emit event so frontend can prompt user
-                let _ = self.events.send(SessionEvent::HostKeyUnknown {
-                    session_id: self.session_id.clone(),
-                    host: self.host.clone(),
-                    fingerprint: fingerprint.clone(),
-                });
-
-                // Wait for user confirmation (blocking, max 30 seconds)
-                if let Some(rx) = self.host_key_rx.take() {
-                    // Use futures::executor::block_on to wait for oneshot result
-                    match futures::executor::block_on(
-                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
-                    ) {
-                        Ok(Ok(true)) => true,
-                        _ => false,
-                    }
-                } else {
-                    false
-                }
-            }
-            Err(russh::keys::Error::KeyChanged { line }) => {
-                // Key changed! Emit warning — possible MITM attack
-                let _ = self.events.send(SessionEvent::Error {
-                    session_id: self.session_id.clone(),
-                    message: format!(
-                        "⚠️ Host key changed for {}:{} (known_hosts line {}). Possible MITM attack!",
-                        self.host, self.port, line
-                    ),
-                });
-                let _ = self.events.send(SessionEvent::HostKeyUnknown {
-                    session_id: self.session_id.clone(),
-                    host: self.host.clone(),
-                    fingerprint: fingerprint.clone(),
-                });
-
-                // Wait for user confirmation (blocking, max 30 seconds)
-                if let Some(rx) = self.host_key_rx.take() {
-                    match futures::executor::block_on(
-                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
-                    ) {
-                        Ok(Ok(user_accepted)) => user_accepted,
-                        _ => false,
-                    }
-                } else {
-                    false
-                }
-            }
-            Err(_) => {
-                // Some other error reading known_hosts — treat as unknown
-                let _ = self.events.send(SessionEvent::HostKeyUnknown {
-                    session_id: self.session_id.clone(),
-                    host: self.host.clone(),
-                    fingerprint: fingerprint.clone(),
-                });
-
-                // Wait for user confirmation (blocking, max 30 seconds)
-                if let Some(rx) = self.host_key_rx.take() {
-                    match futures::executor::block_on(
-                        tokio::time::timeout(std::time::Duration::from_secs(30), rx)
-                    ) {
-                        Ok(Ok(true)) => true,
-                        _ => false,
-                    }
-                } else {
-                    false
-                }
             }
         };
 
-        async move { Ok(accepted) }
+        let rx_opt = self.host_key_rx.take();
+
+        async move {
+            if !needs_confirmation {
+                return Ok(true);
+            }
+
+            if let Some(rx) = rx_opt {
+                match tokio::time::timeout(std::time::Duration::from_secs(30), rx).await {
+                    Ok(Ok(accepted)) => Ok(accepted),
+                    _ => Ok(false),
+                }
+            } else {
+                Ok(false)
+            }
+        }
     }
 }

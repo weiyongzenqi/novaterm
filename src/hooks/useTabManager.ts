@@ -35,19 +35,37 @@ export function useTabManager(initialTabs: Tab[] = []): TabState & TabManagerAct
   });
 
   const addTab = useCallback((title?: string): string => {
-    const newTab: Tab = {
-      id: generateTabId(),
-      title: title || `Terminal ${tabs.size + 1}`,
-      createdAt: new Date(),
-    };
+    const id = generateTabId();
+
     setTabs((prev) => {
+      // Calculate title inside functional update to avoid duplicates
+      let finalTitle: string;
+      if (title) {
+        finalTitle = title;
+      } else {
+        const existingNumbers = new Set<number>();
+        prev.forEach((tab) => {
+          const match = tab.title.match(/^Terminal (\d+)$/);
+          if (match) existingNumbers.add(parseInt(match[1], 10));
+        });
+        let num = 1;
+        while (existingNumbers.has(num)) num++;
+        finalTitle = `Terminal ${num}`;
+      }
+
+      const newTab: Tab = {
+        id,
+        title: finalTitle,
+        createdAt: new Date(),
+      };
+
       const newMap = new Map(prev);
       newMap.set(newTab.id, newTab);
       return newMap;
     });
-    setActiveTabId(newTab.id);
-    return newTab.id;
-  }, [tabs.size, generateTabId]);
+    setActiveTabId(id);
+    return id;
+  }, [generateTabId]);
 
   const removeTab = useCallback((id: string): void => {
     setTabs((prev) => {

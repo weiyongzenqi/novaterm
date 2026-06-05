@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use tokio::time::{timeout, Duration};
 
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -224,9 +225,16 @@ async fn run_sftp_session<R: Runtime>(
     };
     let addr = format!("{}:{}", host, port);
 
-    let mut handle = russh::client::connect(ssh_config, addr.as_str(), handler)
-        .await
-        .with_context(|| format!("connection failed to {}", addr))?;
+    // Connect to server with 15 second timeout
+    let connect_result = timeout(
+        Duration::from_secs(15),
+        russh::client::connect(ssh_config, addr.as_str(), handler)
+    ).await;
+
+    let mut handle = match connect_result {
+        Ok(inner) => inner.with_context(|| format!("SFTP connection failed to {}", addr))?,
+        Err(_) => return Err(anyhow!("SFTP connection timed out after 15 seconds to {}", addr)),
+    };
 
     let authed = match &auth {
         crate::ssh::AuthConfig::Password { password } => {
@@ -327,19 +335,27 @@ async fn run_sftp_session<R: Runtime>(
             }
 
             SftpCommand::Delete(path) => {
-                match sftp.remove_file(&path).await {
-                    Ok(()) => {}
-                    Err(_) => {
-                        let _ = sftp.remove_dir(&path).await;
+                let delete_result = match sftp.remove_file(&path).await {
+                    Ok(()) => Ok(()),
+                    Err(_) => sftp.remove_dir(&path).await,
+                };
+                match delete_result {
+                    Ok(()) => {
+                        let parent = parent_dir(&path);
+                        if let Ok(entries) = list_dir_impl(&sftp, &parent).await {
+                            emit_event(&app, &session_id, SftpEvent::Entries {
+                                session_id: session_id.clone(),
+                                path: parent,
+                                entries,
+                            });
+                        }
                     }
-                }
-                let parent = parent_dir(&path);
-                if let Ok(entries) = list_dir_impl(&sftp, &parent).await {
-                    emit_event(&app, &session_id, SftpEvent::Entries {
-                        session_id: session_id.clone(),
-                        path: parent,
-                        entries,
-                    });
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Failed to delete {}: {}", path, e),
+                        });
+                    }
                 }
             }
 
@@ -485,9 +501,9 @@ impl Handler for SftpClientHandler {
                     Ok(true)
                 }
                 Ok(false) => {
-                    // Unknown host, accept but warn (same as SSH behavior)
-                    eprintln!("Unknown host key for {}:{}", host, port);
-                    Ok(true)
+                    // Unknown host - reject for security (user must first connect via SSH terminal)
+                    eprintln!("Rejected: unknown host key for {}:{}", host, port);
+                    Ok(false)
                 }
                 Err(e) => {
                     // Key changed - REJECT connection (MITM risk!)
