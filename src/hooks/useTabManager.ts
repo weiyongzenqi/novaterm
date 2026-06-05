@@ -71,17 +71,19 @@ export function useTabManager(initialTabs: Tab[] = []): TabState & TabManagerAct
     setTabs((prev) => {
       const newMap = new Map(prev);
       newMap.delete(id);
+
+      // Also update activeTabId based on the latest tabs
+      setActiveTabId((prevActiveId) => {
+        if (prevActiveId === id) {
+          const remainingIds = Array.from(newMap.keys());
+          return remainingIds[remainingIds.length - 1] || null;
+        }
+        return prevActiveId;
+      });
+
       return newMap;
     });
-    setActiveTabId((prevActiveId) => {
-      if (prevActiveId === id) {
-        // Switch to another tab
-        const remainingIds = Array.from(tabs.keys()).filter((tid) => tid !== id);
-        return remainingIds[remainingIds.length - 1] || null;
-      }
-      return prevActiveId;
-    });
-  }, [tabs]);
+  }, []);
 
   const switchTab = useCallback((id: string): void => {
     if (tabs.has(id)) {

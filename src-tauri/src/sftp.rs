@@ -272,6 +272,16 @@ async fn run_sftp_session<R: Runtime>(
             SftpCommand::Close => break,
 
             SftpCommand::ListDir(path) => {
+                let path = match sanitize_remote_path(&path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 match list_dir_impl(&sftp, &path).await {
                     Ok(entries) => {
                         emit_event(&app, &session_id, SftpEvent::Entries {
@@ -290,8 +300,27 @@ async fn run_sftp_session<R: Runtime>(
             }
 
             SftpCommand::Download { remote, local_dir } => {
+                let remote = match sanitize_remote_path(&remote) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid remote path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 let filename = base_name(&remote);
-                let local_path = format!("{}/{}", local_dir.trim_end_matches('/'), filename);
+                let local_path = match validate_local_path(&local_dir, &filename) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid local path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 match download_impl(&sftp, &remote, &local_path).await {
                     Ok(()) => {
                         emit_event(&app, &session_id, SftpEvent::Status {
@@ -310,6 +339,16 @@ async fn run_sftp_session<R: Runtime>(
 
             SftpCommand::Upload { local, remote_dir } => {
                 let filename = base_name(&local);
+                let remote_dir = match sanitize_remote_path(&remote_dir) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid remote path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 let remote_path = format!("{}/{}", remote_dir.trim_end_matches('/'), filename);
                 match upload_impl(&sftp, &local, &remote_path).await {
                     Ok(()) => {
@@ -335,6 +374,16 @@ async fn run_sftp_session<R: Runtime>(
             }
 
             SftpCommand::Delete(path) => {
+                let path = match sanitize_remote_path(&path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 let delete_result = match sftp.remove_file(&path).await {
                     Ok(()) => Ok(()),
                     Err(_) => sftp.remove_dir(&path).await,
@@ -360,6 +409,16 @@ async fn run_sftp_session<R: Runtime>(
             }
 
             SftpCommand::Mkdir(path) => {
+                let path = match sanitize_remote_path(&path) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        emit_event(&app, &session_id, SftpEvent::Error {
+                            session_id: session_id.clone(),
+                            message: format!("Invalid path: {}", e),
+                        });
+                        continue;
+                    }
+                };
                 match sftp.create_dir(&path).await {
                     Ok(()) => {
                         let parent = parent_dir(&path);
@@ -471,6 +530,33 @@ fn parent_dir(path: &str) -> String {
         Some(0) | None => "/".to_string(),
         Some(i) => p[..i].to_string(),
     }
+}
+
+/// Sanitize a remote SFTP path: reject null bytes and normalize
+fn sanitize_remote_path(path: &str) -> Result<String> {
+    if path.contains('\0') {
+        return Err(anyhow!("path contains null byte"));
+    }
+    // Normalize: remove redundant slashes and resolve . components
+    // Keep .. as-is since users may legitimately navigate up
+    let normalized = path
+        .split('/')
+        .filter(|s| !s.is_empty() && s != &".")
+        .collect::<Vec<_>>()
+        .join("/");
+    Ok(format!("/{}", normalized))
+}
+
+/// Validate a local download path stays within the target directory
+fn validate_local_path(local_dir: &str, filename: &str) -> Result<String> {
+    if filename.contains('\0') || filename.contains('/') || filename.contains('\\') {
+        return Err(anyhow!("invalid filename: {}", filename));
+    }
+    if filename == ".." || filename == "." {
+        return Err(anyhow!("invalid filename: {}", filename));
+    }
+    let local_path = format!("{}/{}", local_dir.trim_end_matches('/'), filename);
+    Ok(local_path)
 }
 
 fn emit_event<R: Runtime>(app: &AppHandle<R>, _session_id: &str, event: SftpEvent) {
