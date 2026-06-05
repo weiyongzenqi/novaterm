@@ -56,22 +56,29 @@ export function TerminalArea({
     };
   }, [tabs, onOutput]);
 
+  const connectionStatusRef = useRef(connectionStatus);
+  connectionStatusRef.current = connectionStatus;
+  const onSendDataRef = useRef(onSendData);
+  onSendDataRef.current = onSendData;
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+
   const handleTerminalReady = useCallback((tabId: string) => {
     return (terminal: import('@xterm/xterm').Terminal) => {
-      const status = connectionStatus?.get(tabId);
+      const status = connectionStatusRef.current?.get(tabId);
 
       if (status === 'connected') {
         // SSH session exists - set up data handling
         terminal.onData((data) => {
-          onSendData?.(tabId, data);
+          onSendDataRef.current?.(tabId, data);
         });
 
-        terminal.write('\x1b[1;32mConnected to server\x1b[0m\r\n');
+        terminal.write('\x1b[1;32m已连接到服务器\x1b[0m\r\n');
       } else {
         // No SSH session - local echo mode
-        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - Terminal ready\r\n`);
-        terminal.write(`Tab: ${tabs.get(tabId)?.title}\r\n`);
-        terminal.write(`\r\n\x1b[90mClick "New Connection" to start an SSH session.\x1b[0m\r\n`);
+        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - 终端就绪\r\n`);
+        terminal.write(`Tab: ${tabsRef.current.get(tabId)?.title || tabId}\r\n`);
+        terminal.write(`\r\n\x1b[90m点击"新建连接"开始 SSH 会话\x1b[0m\r\n`);
 
         // Local echo for demo
         terminal.onData((data) => {
@@ -79,7 +86,7 @@ export function TerminalArea({
         });
       }
     };
-  }, [tabs, connectionStatus, onSendData]);
+  }, []); // 空依赖数组
 
   const handleResize = useCallback((tabId: string, cols: number, rows: number) => {
     onResize?.(tabId, cols, rows);
@@ -101,12 +108,12 @@ export function TerminalArea({
           >
             {isConnecting && (
               <div className={styles.overlay}>
-                <span>Connecting...</span>
+                <span>连接中...</span>
               </div>
             )}
             {error && (
               <div className={styles.errorOverlay}>
-                <span className={styles.errorText}>Error: {error}</span>
+                <span className={styles.errorText}>错误: {error}</span>
               </div>
             )}
             <Terminal

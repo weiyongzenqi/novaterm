@@ -17,6 +17,7 @@ pub enum AuthType {
 
 /// Saved session configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionConfig {
     pub id: String,
     pub name: String,
@@ -34,6 +35,7 @@ pub struct SessionConfig {
 
 /// Application configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     #[serde(default)]
     pub sessions: Vec<SessionConfig>,

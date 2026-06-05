@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useEffect, useRef } from 'react';
 import { useTerminal } from './useTerminal';
 import type { TerminalProps, SearchFunctions } from './types';
 import type { Terminal as TerminalInstance } from '@xterm/xterm';
@@ -30,9 +30,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       clear: () => terminal?.clear(),
     }), [terminal, fit, search]);
 
-    // Call onReady when terminal is ready
+    // Call onReady when terminal is ready (with guard to prevent duplicate calls)
+    const onReadyCalledRef = useRef(false);
     useEffect(() => {
-      if (terminal && onReady) {
+      if (terminal && onReady && !onReadyCalledRef.current) {
+        onReadyCalledRef.current = true;
         onReady(terminal);
       }
     }, [terminal, onReady]);

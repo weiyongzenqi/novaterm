@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { RemoteEntry } from '../../ssh';
+import { t } from '../../i18n/zh';
 import styles from './SftpPanel.module.css';
 
 interface SftpPanelProps {
@@ -133,7 +134,7 @@ export function SftpPanel({
           className={styles.toolbarButton}
           onClick={onNavigateUp}
           disabled={currentPath === '/' || loading}
-          title="Go to parent directory"
+          title={t('sftp.parentDir')}
         >
           ⬆️
         </button>
@@ -141,7 +142,7 @@ export function SftpPanel({
           className={styles.toolbarButton}
           onClick={onRefresh}
           disabled={loading}
-          title="Refresh"
+          title={t('sftp.refresh')}
         >
           🔄
         </button>
@@ -150,9 +151,9 @@ export function SftpPanel({
           className={styles.toolbarButton}
           onClick={onUpload}
           disabled={loading}
-          title="Upload file"
+          title={t('sftp.upload')}
         >
-          ⬆️ Upload
+          ⬆️ {t('sftp.upload')}
         </button>
         <button
           className={styles.toolbarButton}
@@ -164,25 +165,25 @@ export function SftpPanel({
             }
           }}
           disabled={selectedEntries.size === 0 || loading}
-          title="Download selected"
+          title={t('sftp.download')}
         >
-          ⬇️ Download
+          ⬇️ {t('sftp.download')}
         </button>
         <button
           className={styles.toolbarButton}
           onClick={handleDeleteSelected}
           disabled={selectedEntries.size === 0 || loading}
-          title="Delete selected"
+          title={t('sftp.delete')}
         >
-          🗑️ Delete
+          🗑️ {t('sftp.delete')}
         </button>
         <button
           className={styles.toolbarButton}
           onClick={onMkdir}
           disabled={loading}
-          title="Create new folder"
+          title={t('sftp.newFolder')}
         >
-          📁 New Folder
+          📁 {t('sftp.newFolder')}
         </button>
       </div>
 
@@ -233,20 +234,20 @@ export function SftpPanel({
         <table className={styles.table}>
           <thead>
             <tr>
-              <th className={styles.colName}>Name</th>
-              <th className={styles.colSize}>Size</th>
-              <th className={styles.colModified}>Modified</th>
+              <th className={styles.colName}>{t('sftp.name')}</th>
+              <th className={styles.colSize}>{t('sftp.size')}</th>
+              <th className={styles.colModified}>{t('sftp.modified')}</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={3} className={styles.loading}>Loading...</td>
+                <td colSpan={3} className={styles.loading}>{t('common.loading')}</td>
               </tr>
             )}
             {!loading && entries.length === 0 && (
               <tr>
-                <td colSpan={3} className={styles.empty}>Empty directory</td>
+                <td colSpan={3} className={styles.empty}>{t('sftp.emptyDir')}</td>
               </tr>
             )}
             {entries.map((entry) => (

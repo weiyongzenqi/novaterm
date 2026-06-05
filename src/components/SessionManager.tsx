@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { SessionConfig } from '../config';
+import { t } from '../i18n/zh';
 import styles from './SessionManager.module.css';
 
 interface SessionManagerProps {
@@ -145,7 +146,7 @@ export function SessionManager({
     <div className={styles.overlay}>
       <div className={styles.manager}>
         <div className={styles.header}>
-          <h2>Session Manager</h2>
+          <h2>{t('session.title')}</h2>
           <button className={styles.closeButton} onClick={onClose}>
             ×
           </button>
@@ -154,7 +155,7 @@ export function SessionManager({
         <div className={styles.toolbar}>
           <input
             type="text"
-            placeholder="Search sessions..."
+            placeholder="搜索会话..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}
@@ -167,7 +168,7 @@ export function SessionManager({
               setSelectedSession(null);
             }}
           >
-            + New Session
+            {t('session.new')}
           </button>
           <button
             className={styles.importButton}
@@ -180,7 +181,7 @@ export function SessionManager({
               }
             }}
           >
-            Import
+            {t('session.import')}
           </button>
           <button
             className={styles.exportButton}
@@ -191,7 +192,7 @@ export function SessionManager({
               }
             }}
           >
-            Export
+            {t('session.export')}
           </button>
         </div>
 
@@ -201,9 +202,9 @@ export function SessionManager({
         {isAdding && (
           <div className={styles.formOverlay}>
             <div className={styles.form}>
-              <h3>Add New Session</h3>
+              <h3>{t('session.new')}</h3>
               <div className={styles.field}>
-                <label>Name</label>
+                <label>{t('session.name')}</label>
                 <input
                   type="text"
                   value={newSession.name}
@@ -212,7 +213,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Host</label>
+                <label>{t('session.host')}</label>
                 <input
                   type="text"
                   value={newSession.host}
@@ -221,7 +222,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Port</label>
+                <label>{t('session.port')}</label>
                 <input
                   type="number"
                   value={newSession.port}
@@ -231,7 +232,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Username</label>
+                <label>{t('session.username')}</label>
                 <input
                   type="text"
                   value={newSession.username}
@@ -240,7 +241,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Auth Type</label>
+                <label>{t('session.authType')}</label>
                 <select
                   value={newSession.authType}
                   onChange={(e) => setNewSession({ ...newSession, authType: e.target.value as 'password' | 'key' })}
@@ -251,7 +252,7 @@ export function SessionManager({
               </div>
               {newSession.authType === 'key' && (
                 <div className={styles.field}>
-                  <label>Private Key Path</label>
+                  <label>{t('dialog.privateKeyPath')}</label>
                   <input
                     type="text"
                     value={newSession.privateKeyPath}
@@ -261,7 +262,7 @@ export function SessionManager({
                 </div>
               )}
               <div className={styles.field}>
-                <label>Group</label>
+                <label>{t('session.group')}</label>
                 <input
                   type="text"
                   value={newSession.group}
@@ -270,9 +271,9 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.formActions}>
-                <button onClick={() => setIsAdding(false)}>Cancel</button>
+                <button onClick={() => setIsAdding(false)}>{t('common.cancel')}</button>
                 <button onClick={handleAddSession} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save'}
+                  {loading ? t('common.loading') : t('common.save')}
                 </button>
               </div>
             </div>
@@ -283,9 +284,9 @@ export function SessionManager({
         {isEditing && editingSession && (
           <div className={styles.formOverlay}>
             <div className={styles.form}>
-              <h3>Edit Session</h3>
+              <h3>{t('session.edit')}</h3>
               <div className={styles.field}>
-                <label>Name</label>
+                <label>{t('session.name')}</label>
                 <input
                   type="text"
                   value={editingSession.name}
@@ -293,7 +294,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Host</label>
+                <label>{t('session.host')}</label>
                 <input
                   type="text"
                   value={editingSession.host}
@@ -301,7 +302,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Port</label>
+                <label>{t('session.port')}</label>
                 <input
                   type="number"
                   value={editingSession.port}
@@ -311,7 +312,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Username</label>
+                <label>{t('session.username')}</label>
                 <input
                   type="text"
                   value={editingSession.username}
@@ -319,7 +320,7 @@ export function SessionManager({
                 />
               </div>
               <div className={styles.field}>
-                <label>Auth Type</label>
+                <label>{t('session.authType')}</label>
                 <select
                   value={editingSession.authType}
                   onChange={(e) => setEditingSession({ ...editingSession, authType: e.target.value as 'password' | 'key' })}
@@ -330,7 +331,7 @@ export function SessionManager({
               </div>
               {editingSession.authType === 'key' && (
                 <div className={styles.field}>
-                  <label>Private Key Path</label>
+                  <label>{t('dialog.privateKeyPath')}</label>
                   <input
                     type="text"
                     value={editingSession.privateKeyPath}
@@ -339,7 +340,7 @@ export function SessionManager({
                 </div>
               )}
               <div className={styles.field}>
-                <label>Group</label>
+                <label>{t('session.group')}</label>
                 <input
                   type="text"
                   value={editingSession.group}
@@ -350,9 +351,9 @@ export function SessionManager({
                 <button onClick={() => {
                   setIsEditing(false);
                   setEditingSession(null);
-                }}>Cancel</button>
+                }}>{t('common.cancel')}</button>
                 <button onClick={handleUpdateSession} disabled={loading}>
-                  {loading ? 'Updating...' : 'Update'}
+                  {loading ? t('common.loading') : t('common.confirm')}
                 </button>
               </div>
             </div>
@@ -363,16 +364,16 @@ export function SessionManager({
         {deleteConfirmId && (
           <div className={styles.confirmOverlay}>
             <div className={styles.confirmDialog}>
-              <h3>Confirm Delete</h3>
-              <p>Are you sure you want to delete this session?</p>
+              <h3>{t('common.delete')}</h3>
+              <p>确定要删除此会话吗？</p>
               <div className={styles.confirmActions}>
-                <button onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                <button onClick={() => setDeleteConfirmId(null)}>{t('common.cancel')}</button>
                 <button
                   className={styles.deleteButton}
                   onClick={() => handleDeleteSession(deleteConfirmId)}
                   disabled={loading}
                 >
-                  {loading ? 'Deleting...' : 'Delete'}
+                  {loading ? t('common.loading') : t('common.delete')}
                 </button>
               </div>
             </div>
@@ -387,12 +388,12 @@ export function SessionManager({
               <table className={styles.sessionTable}>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Host</th>
-                    <th>Port</th>
-                    <th>Username</th>
-                    <th>Last Used</th>
-                    <th>Actions</th>
+                    <th>{t('session.name')}</th>
+                    <th>{t('session.host')}</th>
+                    <th>{t('session.port')}</th>
+                    <th>{t('session.username')}</th>
+                    <th>{t('session.lastUsed')}</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,7 +416,7 @@ export function SessionManager({
                             handleConnect(session);
                           }}
                         >
-                          Connect
+                          {t('dialog.connect')}
                         </button>
                         <button
                           onClick={(e) => {
@@ -426,7 +427,7 @@ export function SessionManager({
                             setIsAdding(false);
                           }}
                         >
-                          Edit
+                          {t('session.edit')}
                         </button>
                         <button
                           className={styles.deleteAction}
@@ -435,7 +436,7 @@ export function SessionManager({
                             setDeleteConfirmId(session.id);
                           }}
                         >
-                          Delete
+                          {t('common.delete')}
                         </button>
                       </td>
                     </tr>
@@ -447,7 +448,7 @@ export function SessionManager({
 
           {filteredSessions.length === 0 && (
             <div className={styles.empty}>
-              {searchQuery ? 'No sessions found matching your search.' : 'No saved sessions. Click "+ New Session" to add one.'}
+              {searchQuery ? '未找到匹配的会话。' : '暂无保存的会话，点击"+ 新建会话"添加。'}
             </div>
           )}
         </div>

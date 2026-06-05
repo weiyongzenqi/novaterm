@@ -24,6 +24,13 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
 
   const [terminal, setTerminal] = useState<Terminal | null>(null);
 
+  // Store latest callbacks in refs so they don't stale in the mount-only useEffect
+  const onDataRef = useRef(onData);
+  useEffect(() => { onDataRef.current = onData; }, [onData]);
+
+  const onResizeRef = useRef(onResize);
+  useEffect(() => { onResizeRef.current = onResize; }, [onResize]);
+
   // Fit terminal to container
   const fit = useCallback(() => {
     if (fitAddonRef.current && terminalInstanceRef.current) {
@@ -92,19 +99,18 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
       requestAnimationFrame(() => {
         fitAddon.fit();
         const dims = fitAddon.proposeDimensions();
-        if (dims && onResize) {
-          onResize(dims.cols, dims.rows);
+        if (dims && onResizeRef.current) {
+          onResizeRef.current(dims.cols, dims.rows);
         }
       });
     });
 
     resizeObserver.observe(terminalRef.current);
 
-    // Handle data input
-    let dataDisposable: { dispose: () => void } | undefined;
-    if (onData) {
-      dataDisposable = terminal.onData(onData);
-    }
+    // Handle data input - use ref so the latest callback is always invoked
+    const dataDisposable = terminal.onData((data) => {
+      onDataRef.current?.(data);
+    });
 
     // Store refs
     terminalInstanceRef.current = terminal;

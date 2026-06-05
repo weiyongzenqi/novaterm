@@ -27,6 +27,12 @@ export function useMultiSSH(): MultiSSHState {
   const [sessions, setSessions] = useState<Map<string, SessionState>>(new Map());
   const outputCallbacksRef = useRef<Map<string, Set<(data: string) => void>>>(new Map());
   const unlistenRef = useRef<UnlistenFn | null>(null);
+  const sessionsRef = useRef<Map<string, SessionState>>(sessions);
+
+  // Keep ref in sync with latest sessions
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
 
   // Listen to SSH events from backend
   useEffect(() => {
@@ -114,7 +120,7 @@ export function useMultiSSH(): MultiSSHState {
   }, []);
 
   const disconnect = useCallback(async (tabId: string) => {
-    const state = sessions.get(tabId);
+    const state = sessionsRef.current.get(tabId);
     if (!state?.sessionId) return;
 
     try {
@@ -135,33 +141,33 @@ export function useMultiSSH(): MultiSSHState {
         return newMap;
       });
     }
-  }, [sessions]);
+  }, []);
 
   const disconnectAll = useCallback(async () => {
-    const disconnectPromises = Array.from(sessions.entries())
+    const disconnectPromises = Array.from(sessionsRef.current.entries())
       .filter(([, state]) => state.sessionId)
       .map(([tabId]) => disconnect(tabId));
     await Promise.all(disconnectPromises);
-  }, [sessions, disconnect]);
+  }, [disconnect]);
 
   const sendData = useCallback(async (tabId: string, data: string) => {
-    const state = sessions.get(tabId);
+    const state = sessionsRef.current.get(tabId);
     if (!state?.sessionId) return;
     const bytes = new TextEncoder().encode(data);
     await invoke('ssh_send_data', { sessionId: state.sessionId, data: Array.from(bytes) });
-  }, [sessions]);
+  }, []);
 
   const resize = useCallback(async (tabId: string, cols: number, rows: number) => {
-    const state = sessions.get(tabId);
+    const state = sessionsRef.current.get(tabId);
     if (!state?.sessionId) return;
     await invoke('ssh_resize', { sessionId: state.sessionId, cols, rows });
-  }, [sessions]);
+  }, []);
 
   const acceptHostKey = useCallback(async (tabId: string) => {
-    const state = sessions.get(tabId);
+    const state = sessionsRef.current.get(tabId);
     if (!state?.sessionId) return;
     await invoke('ssh_accept_host_key', { sessionId: state.sessionId });
-  }, [sessions]);
+  }, []);
 
   const onOutput = useCallback((tabId: string, callback: (data: string) => void) => {
     if (!outputCallbacksRef.current.has(tabId)) {
@@ -174,16 +180,16 @@ export function useMultiSSH(): MultiSSHState {
   }, []);
 
   const getSessionId = useCallback((tabId: string): string | null => {
-    return sessions.get(tabId)?.sessionId || null;
-  }, [sessions]);
+    return sessionsRef.current.get(tabId)?.sessionId || null;
+  }, []);
 
   const getStatus = useCallback((tabId: string): SSHStatus => {
-    return sessions.get(tabId)?.status || 'disconnected';
-  }, [sessions]);
+    return sessionsRef.current.get(tabId)?.status || 'disconnected';
+  }, []);
 
   const getError = useCallback((tabId: string): string | null => {
-    return sessions.get(tabId)?.error || null;
-  }, [sessions]);
+    return sessionsRef.current.get(tabId)?.error || null;
+  }, []);
 
   return {
     sessions,

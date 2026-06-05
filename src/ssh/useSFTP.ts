@@ -16,12 +16,18 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
   const [loading, setLoading] = useState<boolean>(false);
 
   const unlistenRef = useRef<UnlistenFn | null>(null);
+  const sftpSessionIdRef = useRef<string | null>(null);
+
+  // Keep ref in sync with latest sftpSessionId
+  useEffect(() => {
+    sftpSessionIdRef.current = sftpSessionId;
+  }, [sftpSessionId]);
 
   useEffect(() => {
     const setupListener = async () => {
       unlistenRef.current = await listen<SftpSessionEvent>('sftp-event', (event) => {
         const payload = event.payload;
-        if (payload.session_id !== sftpSessionId) return;
+        if (payload.session_id !== sftpSessionIdRef.current) return;
 
         switch (payload.type) {
           case 'Connected':
@@ -61,7 +67,7 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
         unlistenRef.current();
       }
     };
-  }, [sftpSessionId]);
+  }, []);
 
   const connect = useCallback(async (config: SftpConfig): Promise<string> => {
     setStatus('connecting');

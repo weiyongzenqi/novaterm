@@ -21,6 +21,7 @@ use tauri::{AppHandle, Emitter, Runtime};
 
 /// Remote file entry info.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RemoteEntry {
     pub name: String,
     pub full_path: String,
@@ -42,7 +43,7 @@ pub enum SftpCommand {
 
 /// Events from SFTP worker to frontend.
 #[derive(Debug, Clone, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum SftpEvent {
     Connected { session_id: String },
     Entries { session_id: String, path: String, entries: Vec<RemoteEntry> },

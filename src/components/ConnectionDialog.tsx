@@ -1,22 +1,40 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { SSHConfig, AuthConfig } from '../ssh';
+import { t } from '../i18n/zh';
 import styles from './ConnectionDialog.module.css';
 
-interface ConnectionDialogProps {
+export interface ConnectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConnect: (config: SSHConfig) => void;
+  onConnect: (config: SSHConfig) => Promise<void> | void;
+  initialConfig?: {
+    host?: string;
+    port?: number;
+    username?: string;
+    authType?: 'password' | 'key';
+  };
 }
 
-export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialogProps) {
-  const [host, setHost] = useState('localhost');
-  const [port, setPort] = useState('22');
-  const [username, setUsername] = useState('');
-  const [authType, setAuthType] = useState<'Password' | 'Key'>('Password');
+export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: ConnectionDialogProps) {
+  const [host, setHost] = useState(initialConfig?.host || 'localhost');
+  const [port, setPort] = useState(String(initialConfig?.port || 22));
+  const [username, setUsername] = useState(initialConfig?.username || '');
+  const [authType, setAuthType] = useState<'Password' | 'Key'>(
+    initialConfig?.authType === 'key' ? 'Key' : 'Password'
+  );
   const [password, setPassword] = useState('');
   const [privateKeyPath, setPrivateKeyPath] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  // Sync initialConfig changes
+  useEffect(() => {
+    if (initialConfig) {
+      setHost(initialConfig.host || 'localhost');
+      setPort(String(initialConfig.port || 22));
+      setUsername(initialConfig.username || '');
+      setAuthType(initialConfig.authType === 'key' ? 'Key' : 'Password');
+    }
+  }, [initialConfig]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +73,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
     };
 
     try {
-      onConnect(config);
+      await onConnect(config);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -70,7 +88,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
     <div className={styles.dialogOverlay}>
       <div className={styles.dialog}>
         <div className={styles.header}>
-          <h2>New SSH Connection</h2>
+          <h2>{t('dialog.newConnection')}</h2>
           <button className={styles.closeButton} onClick={onClose}>
             ×
           </button>
@@ -78,7 +96,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label htmlFor="host">Host</label>
+            <label htmlFor="host">{t('dialog.host')}</label>
             <input
               id="host"
               type="text"
@@ -90,7 +108,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="port">Port</label>
+            <label htmlFor="port">{t('dialog.port')}</label>
             <input
               id="port"
               type="number"
@@ -103,7 +121,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">{t('dialog.username')}</label>
             <input
               id="username"
               type="text"
@@ -115,7 +133,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="authType">Authentication</label>
+            <label htmlFor="authType">{t('dialog.authentication')}</label>
             <select
               id="authType"
               value={authType}
@@ -128,7 +146,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
 
           {authType === 'Password' && (
             <div className={styles.field}>
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t('dialog.password')}</label>
               <input
                 id="password"
                 type="password"
@@ -142,7 +160,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
 
           {authType === 'Key' && (
             <div className={styles.field}>
-              <label htmlFor="privateKeyPath">Private Key Path</label>
+              <label htmlFor="privateKeyPath">{t('dialog.privateKeyPath')}</label>
               <input
                 id="privateKeyPath"
                 type="text"
@@ -168,14 +186,14 @@ export function ConnectionDialog({ isOpen, onClose, onConnect }: ConnectionDialo
               onClick={onClose}
               disabled={isConnecting}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className={styles.connectButton}
               disabled={isConnecting}
             >
-              {isConnecting ? 'Connecting...' : 'Connect'}
+              {isConnecting ? t('status.connecting') : t('dialog.connect')}
             </button>
           </div>
         </form>

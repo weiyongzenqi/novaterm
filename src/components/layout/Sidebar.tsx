@@ -1,6 +1,7 @@
 import { useTheme } from '../../themes';
 import ThemeSelector from '../ThemeSelector';
 import type { SessionConfig } from '../../config';
+import { t } from '../../i18n/zh';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -29,26 +30,26 @@ export function Sidebar({
   return (
     <aside className={styles.sidebar}>
       <div className={styles.header}>
-        <h1 className={styles.title}>NovaTerm</h1>
+        <h1 className={styles.title}>{t('app.name')}</h1>
       </div>
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>Connection</h2>
+        <h2 className={styles.sectionTitle}>{t('sidebar.connection')}</h2>
         <button className={styles.newConnectionButton} onClick={onNewConnection}>
-          + New Connection
+          {t('sidebar.newConnection')}
         </button>
       </div>
 
       {/* Saved Sessions */}
       <div className={styles.sessionsSection}>
         <h2 className={styles.sectionTitle}>
-          <span>Sessions</span>
+          <span>{t('sidebar.sessions')}</span>
           <button className={styles.manageButton} onClick={onManageSessions}>
-            Manage
+            {t('sidebar.manage')}
           </button>
         </h2>
         {sessions.length === 0 ? (
-          <div className={styles.emptySessions}>No saved sessions</div>
+          <div className={styles.emptySessions}>{t('sidebar.noSessions')}</div>
         ) : (
           <div className={styles.sessionsList}>
             {Object.entries(groupedSessions).map(([group, groupSessions]) => (
@@ -74,29 +75,7 @@ export function Sidebar({
         )}
       </div>
 
-      <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>System Monitor</h2>
-        <div className={styles.monitorPlaceholder}>
-          <div className={styles.monitorItem}>
-            <span className={styles.monitorLabel}>CPU</span>
-            <div className={styles.monitorBar}>
-              <div className={styles.monitorBarFill} style={{ width: '0%' }} />
-            </div>
-          </div>
-          <div className={styles.monitorItem}>
-            <span className={styles.monitorLabel}>Memory</span>
-            <div className={styles.monitorBar}>
-              <div className={styles.monitorBarFill} style={{ width: '0%' }} />
-            </div>
-          </div>
-          <div className={styles.monitorItem}>
-            <span className={styles.monitorLabel}>Network</span>
-            <div className={styles.monitorBar}>
-              <div className={styles.monitorBarFill} style={{ width: '0%' }} />
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* System Monitor 暂时隐藏 - 待实现真实监控功能 */}
 
       <div className={styles.footer}>
         <ThemeSelector />

@@ -9,8 +9,10 @@ import { SessionManager } from '../SessionManager';
 import { useTabManager } from '../../hooks/useTabManager';
 import { useMultiSSH, useSFTP } from '../../ssh';
 import { useConfig } from '../../config';
+import { save } from '@tauri-apps/plugin-dialog';
 import type { SSHConfig, RemoteEntry } from '../../ssh';
 import type { SessionConfig } from '../../config';
+import type { ConnectionDialogProps } from '../ConnectionDialog';
 import styles from './AppLayout.module.css';
 
 export function AppLayout() {
@@ -18,6 +20,7 @@ export function AppLayout() {
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const [isSessionManagerOpen, setIsSessionManagerOpen] = useState(false);
   const [showSftpPanel, setShowSftpPanel] = useState(false);
+  const [preFilledConfig, setPreFilledConfig] = useState<ConnectionDialogProps['initialConfig']>(undefined);
 
   // Configuration management
   const {
@@ -59,6 +62,13 @@ export function AppLayout() {
     }
   }, [showSftpPanel, activeConfig, sftp.status, sftp.connect]);
 
+  // SFTP: auto-load root directory after connection
+  useEffect(() => {
+    if (showSftpPanel && sftp.status === 'connected' && sftp.entries.length === 0 && !sftp.loading) {
+      sftp.listDir('/');
+    }
+  }, [showSftpPanel, sftp.status, sftp.entries.length, sftp.loading, sftp.listDir]);
+
   // Handle new connection from dialog
   const handleConnect = useCallback(async (config: SSHConfig) => {
     const tabId = addTab(`${config.username}@${config.host}`);
@@ -86,16 +96,17 @@ export function AppLayout() {
         : { type: 'Password', password: '' }, // Empty password - user must input
     };
 
-    // If password auth, open connection dialog with pre-filled values
     if (session.authType === 'password') {
-      // Open ConnectionDialog with session data pre-filled
-      // For now, we'll prompt for password via the dialog
-      // A better approach would be to pre-fill the dialog
+      // Pre-fill connection dialog with session data
+      setPreFilledConfig({
+        host: session.host,
+        port: session.port,
+        username: session.username,
+        authType: 'password',
+      });
       setIsConnectionDialogOpen(true);
-      // Note: ConnectionDialog currently doesn't support pre-filled values
-      // This is a limitation that could be improved in future
     } else {
-      // Key auth - can connect directly if key path is set
+      // Key auth - connect directly
       handleConnect(sshConfig);
     }
 
@@ -150,12 +161,21 @@ export function AppLayout() {
     sftp.refresh();
   }, [sftp]);
 
-  const handleSftpDownload = useCallback(async (_entry: RemoteEntry) => {
-    // Note: In a real implementation, we would use a file picker
-    // For now, download to a temp directory
-    // eslint-disable-next-line no-console
-    console.log('Download:', _entry.name);
-  }, []);
+  const handleSftpDownload = useCallback(async (entry: RemoteEntry) => {
+    try {
+      const savePath = await save({
+        defaultPath: entry.name,
+        title: '保存文件',
+      });
+      if (savePath) {
+        const lastSlash = savePath.lastIndexOf('/') !== -1 ? savePath.lastIndexOf('/') : savePath.lastIndexOf('\\');
+        const localDir = savePath.substring(0, lastSlash);
+        await sftp.download(entry.full_path, localDir);
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
+  }, [sftp]);
 
   const handleSftpUpload = useCallback(async () => {
     // Note: In a real implementation, we would use a file picker
@@ -169,10 +189,11 @@ export function AppLayout() {
   }, [sftp]);
 
   const handleSftpMkdir = useCallback(async () => {
-    // Note: In a real implementation, we would prompt for name
-    const name = 'new_folder';
-    const path = `${sftp.currentPath}/${name}`;
-    sftp.mkdir(path);
+    const name = prompt('请输入文件夹名称:');
+    if (name && name.trim()) {
+      const path = `${sftp.currentPath}/${name.trim()}`;
+      sftp.mkdir(path);
+    }
   }, [sftp]);
 
   // Toggle SFTP panel
@@ -231,20 +252,24 @@ export function AppLayout() {
             </div>
           )}
         </div>
-        <StatusBar>
+        <StatusBar connectionStatus={activeTabId ? getStatus(activeTabId) : 'disconnected'}>
           <button
             className={styles.sftpToggle}
             onClick={handleToggleSftp}
-            title={showSftpPanel ? 'Hide SFTP Panel' : 'Show SFTP Panel'}
+            title={showSftpPanel ? '隐藏 SFTP' : '显示 SFTP'}
           >
-            📁 {showSftpPanel ? 'Hide SFTP' : 'SFTP'}
+            📁 {showSftpPanel ? '隐藏 SFTP' : 'SFTP'}
           </button>
         </StatusBar>
       </div>
       <ConnectionDialog
         isOpen={isConnectionDialogOpen}
-        onClose={() => setIsConnectionDialogOpen(false)}
+        onClose={() => {
+          setIsConnectionDialogOpen(false);
+          setPreFilledConfig(undefined);
+        }}
         onConnect={handleConnect}
+        initialConfig={preFilledConfig}
       />
       <SessionManager
         isOpen={isSessionManagerOpen}

@@ -19,7 +19,7 @@ use tauri::{AppHandle, Emitter, Runtime};
 
 /// Authentication configuration for SSH connection.
 #[derive(Debug, Clone, serde::Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum AuthConfig {
     Password { password: String },
     Key { private_key_path: String, passphrase: Option<String> },
@@ -27,6 +27,7 @@ pub enum AuthConfig {
 
 /// SSH session configuration.
 #[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SSHConfig {
     pub host: String,
     pub port: u16,
@@ -47,7 +48,7 @@ pub enum SessionCommand {
 
 /// Events emitted from SSH session to frontend.
 #[derive(Debug, Clone, serde::Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum SessionEvent {
     /// Connection established.
     Connected { session_id: String },
