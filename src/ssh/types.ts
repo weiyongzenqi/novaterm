@@ -20,11 +20,11 @@ export type SSHStatus = 'disconnected' | 'connecting' | 'connected';
 
 /** SSH session event from backend */
 export type SSHSessionEvent =
-  | { type: 'Connected'; sessionId: string }
-  | { type: 'Output'; sessionId: string; data: string }
-  | { type: 'Closed'; sessionId: string; reason: string }
-  | { type: 'Error'; sessionId: string; message: string }
-  | { type: 'HostKeyUnknown'; sessionId: string; host: string; fingerprint: string };
+  | { type: 'connected'; sessionId: string }
+  | { type: 'output'; sessionId: string; data: string }
+  | { type: 'closed'; sessionId: string; reason: string }
+  | { type: 'error'; sessionId: string; message: string }
+  | { type: 'hostKeyUnknown'; sessionId: string; host: string; fingerprint: string };
 
 /** SSH hook return type */
 export interface UseSSHReturn {

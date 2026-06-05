@@ -23,7 +23,7 @@ export function HostKeyConfirm() {
   useEffect(() => {
     const unlisten = listen<HostKeyUnknownPayload>('ssh-event', (event) => {
       const payload = event.payload;
-      if (payload.type === 'HostKeyUnknown') {
+      if (payload.type === 'hostKeyUnknown') {
         setPending({
           sessionId: payload.sessionId,
           host: payload.host,

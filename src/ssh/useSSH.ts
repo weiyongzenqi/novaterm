@@ -21,22 +21,22 @@ export function useSSH(): UseSSHReturn {
         if (payload.sessionId !== sessionId) return;
 
         switch (payload.type) {
-          case 'Connected':
+          case 'connected':
             setStatus('connected');
             setError(null);
             break;
-          case 'Output':
+          case 'output':
             outputCallbacksRef.current.forEach(cb => cb(payload.data));
             break;
-          case 'Closed':
+          case 'closed':
             setStatus('disconnected');
             setSessionId(null);
             break;
-          case 'Error':
+          case 'error':
             setError(payload.message);
             setStatus('disconnected');
             break;
-          case 'HostKeyUnknown':
+          case 'hostKeyUnknown':
             // Handle host key verification (show dialog)
             setError(`Unknown host key: ${payload.fingerprint}`);
             break;

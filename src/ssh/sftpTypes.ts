@@ -13,12 +13,12 @@ export interface RemoteEntry {
 
 /** SFTP session event from backend */
 export type SftpSessionEvent =
-  | { type: 'Connected'; sessionId: string }
-  | { type: 'Entries'; sessionId: string; path: string; entries: RemoteEntry[] }
-  | { type: 'TransferProgress'; sessionId: string; id: string; name: string; isUpload: boolean; transferred: number; total: number; state: number }
-  | { type: 'Error'; sessionId: string; message: string }
-  | { type: 'Closed'; sessionId: string }
-  | { type: 'Status'; sessionId: string; message: string };
+  | { type: 'connected'; sessionId: string }
+  | { type: 'entries'; sessionId: string; path: string; entries: RemoteEntry[] }
+  | { type: 'transferProgress'; sessionId: string; id: string; name: string; isUpload: boolean; transferred: number; total: number; state: number }
+  | { type: 'error'; sessionId: string; message: string }
+  | { type: 'closed'; sessionId: string }
+  | { type: 'status'; sessionId: string; message: string };
 
 /** SFTP connection status */
 export type SftpStatus = 'disconnected' | 'connecting' | 'connected';

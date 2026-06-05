@@ -39,30 +39,30 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
         if (payload.sessionId !== sftpSessionIdRef.current) return;
 
         switch (payload.type) {
-          case 'Connected':
+          case 'connected':
             setStatus('connected');
             setError(null);
             setLoading(false);
             break;
-          case 'Entries':
+          case 'entries':
             setCurrentPath(payload.path);
             setEntries(payload.entries);
             setLoading(false);
             break;
-          case 'Error':
+          case 'error':
             setError(payload.message);
             setLoading(false);
             break;
-          case 'Closed':
+          case 'closed':
             setStatus('disconnected');
             setSftpSessionId(null);
             setEntries([]);
             setLoading(false);
             break;
-          case 'Status':
+          case 'status':
             setStatusMessage(payload.message);
             break;
-          case 'TransferProgress':
+          case 'transferProgress':
             // Handle transfer progress if needed
             break;
         }

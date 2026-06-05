@@ -46,19 +46,19 @@ export function useMultiSSH(): MultiSSHState {
           for (const [tabId, state] of newMap.entries()) {
             if (state.sessionId === payload.sessionId) {
               switch (payload.type) {
-                case 'Connected':
+                case 'connected':
                   newMap.set(tabId, { ...state, status: 'connected', error: null });
                   break;
-                case 'Output':
+                case 'output':
                   outputCallbacksRef.current.get(tabId)?.forEach(cb => cb(payload.data));
                   break;
-                case 'Closed':
+                case 'closed':
                   newMap.set(tabId, { sessionId: null, status: 'disconnected', error: null });
                   break;
-                case 'Error':
+                case 'error':
                   newMap.set(tabId, { ...state, status: 'disconnected', error: payload.message });
                   break;
-                case 'HostKeyUnknown':
+                case 'hostKeyUnknown':
                   newMap.set(tabId, { ...state, error: `Unknown host key: ${payload.fingerprint}` });
                   break;
               }
