@@ -71,5 +71,5 @@ export interface SftpConfig {
 
 /** Authentication configuration */
 export type AuthConfig =
-  | { type: 'Password'; password: string }
-  | { type: 'Key'; privateKeyPath: string; passphrase?: string };
+  | { type: 'password'; password: string }
+  | { type: 'key'; privateKeyPath: string; passphrase?: string };

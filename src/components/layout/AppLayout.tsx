@@ -94,8 +94,8 @@ export function AppLayout() {
       port: session.port,
       username: session.username,
       auth: session.authType === 'key'
-        ? { type: 'Key', privateKeyPath: session.privateKeyPath || '' }
-        : { type: 'Password', password: '' }, // Empty password - user must input
+        ? { type: 'key', privateKeyPath: session.privateKeyPath || '' }
+        : { type: 'password', password: '' }, // Empty password - user must input
     };
 
     if (session.authType === 'password') {
