@@ -37,3 +37,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# 本地环境配置（不提交）
+env.sh
