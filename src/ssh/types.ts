@@ -5,7 +5,7 @@
 /** Authentication configuration */
 export type AuthConfig =
   | { type: 'Password'; password: string }
-  | { type: 'Key'; private_key_path: string; passphrase?: string };
+  | { type: 'Key'; privateKeyPath: string; passphrase?: string };
 
 /** SSH connection configuration */
 export interface SSHConfig {
@@ -20,11 +20,11 @@ export type SSHStatus = 'disconnected' | 'connecting' | 'connected';
 
 /** SSH session event from backend */
 export type SSHSessionEvent =
-  | { type: 'Connected'; session_id: string }
-  | { type: 'Output'; session_id: string; data: string }
-  | { type: 'Closed'; session_id: string; reason: string }
-  | { type: 'Error'; session_id: string; message: string }
-  | { type: 'HostKeyUnknown'; session_id: string; host: string; fingerprint: string };
+  | { type: 'Connected'; sessionId: string }
+  | { type: 'Output'; sessionId: string; data: string }
+  | { type: 'Closed'; sessionId: string; reason: string }
+  | { type: 'Error'; sessionId: string; message: string }
+  | { type: 'HostKeyUnknown'; sessionId: string; host: string; fingerprint: string };
 
 /** SSH hook return type */
 export interface UseSSHReturn {

@@ -62,7 +62,7 @@ export function ConnectionDialog({ isOpen, onClose, onConnect, initialConfig }: 
         setIsConnecting(false);
         return;
       }
-      auth = { type: 'Key', private_key_path: privateKeyPath };
+      auth = { type: 'Key', privateKeyPath: privateKeyPath };
     }
 
     const config: SSHConfig = {

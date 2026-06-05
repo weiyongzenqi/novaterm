@@ -92,7 +92,7 @@ export function AppLayout() {
       port: session.port,
       username: session.username,
       auth: session.authType === 'key'
-        ? { type: 'Key', private_key_path: session.privateKeyPath || '' }
+        ? { type: 'Key', privateKeyPath: session.privateKeyPath || '' }
         : { type: 'Password', password: '' }, // Empty password - user must input
     };
 
@@ -170,7 +170,7 @@ export function AppLayout() {
       if (savePath) {
         const lastSlash = savePath.lastIndexOf('/') !== -1 ? savePath.lastIndexOf('/') : savePath.lastIndexOf('\\');
         const localDir = savePath.substring(0, lastSlash);
-        await sftp.download(entry.full_path, localDir);
+        await sftp.download(entry.fullPath, localDir);
       }
     } catch (err) {
       console.error('Download failed:', err);
@@ -185,7 +185,7 @@ export function AppLayout() {
   }, []);
 
   const handleSftpDelete = useCallback(async (entry: RemoteEntry) => {
-    sftp.deleteFile(entry.full_path);
+    sftp.deleteFile(entry.fullPath);
   }, [sftp]);
 
   const handleSftpMkdir = useCallback(async () => {

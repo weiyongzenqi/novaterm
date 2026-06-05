@@ -27,7 +27,7 @@ export function useSFTP(_sshSessionId: string | null): UseSFTPReturn {
     const setupListener = async () => {
       unlistenRef.current = await listen<SftpSessionEvent>('sftp-event', (event) => {
         const payload = event.payload;
-        if (payload.session_id !== sftpSessionIdRef.current) return;
+        if (payload.sessionId !== sftpSessionIdRef.current) return;
 
         switch (payload.type) {
           case 'Connected':

@@ -44,7 +44,7 @@ export function useMultiSSH(): MultiSSHState {
         setSessions(prev => {
           const newMap = new Map(prev);
           for (const [tabId, state] of newMap.entries()) {
-            if (state.sessionId === payload.session_id) {
+            if (state.sessionId === payload.sessionId) {
               switch (payload.type) {
                 case 'Connected':
                   newMap.set(tabId, { ...state, status: 'connected', error: null });

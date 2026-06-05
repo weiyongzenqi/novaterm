@@ -18,7 +18,7 @@ export function useSSH(): UseSSHReturn {
     const setupListener = async () => {
       unlistenRef.current = await listen<SSHSessionEvent>('ssh-event', (event) => {
         const payload = event.payload;
-        if (payload.session_id !== sessionId) return;
+        if (payload.sessionId !== sessionId) return;
 
         switch (payload.type) {
           case 'Connected':

@@ -37,7 +37,7 @@ function formatDate(timestamp: number): string {
 }
 
 function getFileIcon(entry: RemoteEntry): string {
-  if (entry.is_dir) return '📁';
+  if (entry.isDir) return '📁';
   const ext = entry.name.split('.').pop()?.toLowerCase() || '';
   const iconMap: Record<string, string> = {
     txt: '📄',
@@ -88,8 +88,8 @@ export function SftpPanel({
   const [addressInput, setAddressInput] = useState(currentPath);
 
   const handleEntryDoubleClick = useCallback((entry: RemoteEntry) => {
-    if (entry.is_dir) {
-      onNavigate(entry.full_path);
+    if (entry.isDir) {
+      onNavigate(entry.fullPath);
     } else {
       onDownload(entry);
     }
@@ -99,14 +99,14 @@ export function SftpPanel({
     setSelectedEntries(prev => {
       const newSet = new Set(prev);
       if (ctrlKey) {
-        if (newSet.has(entry.full_path)) {
-          newSet.delete(entry.full_path);
+        if (newSet.has(entry.fullPath)) {
+          newSet.delete(entry.fullPath);
         } else {
-          newSet.add(entry.full_path);
+          newSet.add(entry.fullPath);
         }
       } else {
         newSet.clear();
-        newSet.add(entry.full_path);
+        newSet.add(entry.fullPath);
       }
       return newSet;
     });
@@ -119,7 +119,7 @@ export function SftpPanel({
 
   const handleDeleteSelected = useCallback(() => {
     selectedEntries.forEach(path => {
-      const entry = entries.find(e => e.full_path === path);
+      const entry = entries.find(e => e.fullPath === path);
       if (entry) onDelete(entry);
     });
     setSelectedEntries(new Set());
@@ -160,8 +160,8 @@ export function SftpPanel({
           onClick={() => {
             const selected = Array.from(selectedEntries);
             if (selected.length > 0) {
-              const entry = entries.find(e => e.full_path === selected[0]);
-              if (entry && !entry.is_dir) onDownload(entry);
+              const entry = entries.find(e => e.fullPath === selected[0]);
+              if (entry && !entry.isDir) onDownload(entry);
             }
           }}
           disabled={selectedEntries.size === 0 || loading}
@@ -252,8 +252,8 @@ export function SftpPanel({
             )}
             {entries.map((entry) => (
               <tr
-                key={entry.full_path}
-                className={`${styles.row} ${selectedEntries.has(entry.full_path) ? styles.selected : ''} ${entry.is_dir ? styles.directory : ''}`}
+                key={entry.fullPath}
+                className={`${styles.row} ${selectedEntries.has(entry.fullPath) ? styles.selected : ''} ${entry.isDir ? styles.directory : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelect(entry, e.ctrlKey || e.metaKey);
@@ -265,7 +265,7 @@ export function SftpPanel({
                   <span className={styles.name}>{entry.name}</span>
                 </td>
                 <td className={styles.colSize}>
-                  {entry.is_dir ? '-' : formatSize(entry.size)}
+                  {entry.isDir ? '-' : formatSize(entry.size)}
                 </td>
                 <td className={styles.colModified}>
                   {formatDate(entry.modified)}

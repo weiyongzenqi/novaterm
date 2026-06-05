@@ -5,20 +5,20 @@
 /** Remote file entry */
 export interface RemoteEntry {
   name: string;
-  full_path: string;
-  is_dir: boolean;
+  fullPath: string;
+  isDir: boolean;
   size: number;
   modified: number;
 }
 
 /** SFTP session event from backend */
 export type SftpSessionEvent =
-  | { type: 'Connected'; session_id: string }
-  | { type: 'Entries'; session_id: string; path: string; entries: RemoteEntry[] }
-  | { type: 'TransferProgress'; session_id: string; id: string; name: string; is_upload: boolean; transferred: number; total: number; state: number }
-  | { type: 'Error'; session_id: string; message: string }
-  | { type: 'Closed'; session_id: string }
-  | { type: 'Status'; session_id: string; message: string };
+  | { type: 'Connected'; sessionId: string }
+  | { type: 'Entries'; sessionId: string; path: string; entries: RemoteEntry[] }
+  | { type: 'TransferProgress'; sessionId: string; id: string; name: string; isUpload: boolean; transferred: number; total: number; state: number }
+  | { type: 'Error'; sessionId: string; message: string }
+  | { type: 'Closed'; sessionId: string }
+  | { type: 'Status'; sessionId: string; message: string };
 
 /** SFTP connection status */
 export type SftpStatus = 'disconnected' | 'connecting' | 'connected';
@@ -72,4 +72,4 @@ export interface SftpConfig {
 /** Authentication configuration */
 export type AuthConfig =
   | { type: 'Password'; password: string }
-  | { type: 'Key'; private_key_path: string; passphrase?: string };
+  | { type: 'Key'; privateKeyPath: string; passphrase?: string };
