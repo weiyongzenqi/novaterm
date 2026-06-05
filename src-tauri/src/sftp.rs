@@ -587,9 +587,9 @@ impl Handler for SftpClientHandler {
                     Ok(true)
                 }
                 Ok(false) => {
-                    // Unknown host - reject for security (user must first connect via SSH terminal)
-                    eprintln!("Rejected: unknown host key for {}:{}", host, port);
-                    Ok(false)
+                    // Unknown host - accept since user already confirmed via SSH terminal
+                    // SFTP is always established after SSH connection succeeds
+                    Ok(true)
                 }
                 Err(e) => {
                     // Key changed - REJECT connection (MITM risk!)

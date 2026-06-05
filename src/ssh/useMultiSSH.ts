@@ -53,7 +53,13 @@ export function useMultiSSH(): MultiSSHState {
                   outputCallbacksRef.current.get(tabId)?.forEach(cb => cb(payload.data));
                   break;
                 case 'closed':
-                  newMap.set(tabId, { sessionId: null, status: 'disconnected', error: null });
+                  // Keep existing error - only clear error on new connection attempt
+                  const existingState = newMap.get(tabId);
+                  newMap.set(tabId, {
+                    sessionId: null,
+                    status: 'disconnected',
+                    error: existingState?.error || null
+                  });
                   break;
                 case 'error':
                   newMap.set(tabId, { ...state, status: 'disconnected', error: payload.message });

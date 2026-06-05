@@ -37,6 +37,7 @@ export function AppLayout() {
 
   // Store SSH configs for each tab to enable SFTP connection
   const sshConfigsRef = useRef<Map<string, SSHConfig>>(new Map());
+  const prevConfigRef = useRef<SSHConfig | null>(null);
 
   const {
     connect,
@@ -57,12 +58,37 @@ export function AppLayout() {
 
   // Auto-connect SFTP when SSH session is connected
   useEffect(() => {
-    if (showSftpPanel && activeConfig && sftp.status === 'disconnected') {
-      sftp.connect(activeConfig).catch(() => {
-        // Error handled by hook
-      });
+    if (!showSftpPanel || !activeConfig) return;
+
+    const prev = prevConfigRef.current;
+    const configChanged = !prev ||
+      prev.host !== activeConfig.host ||
+      prev.port !== activeConfig.port ||
+      prev.username !== activeConfig.username;
+
+    if (configChanged) {
+      // Config changed - disconnect old and reconnect
+      const doReconnect = async () => {
+        if (sftp.status !== 'disconnected') {
+          await sftp.disconnect();
+        }
+        sftp.connect(activeConfig).catch(() => {});
+      };
+      doReconnect();
+    } else if (sftp.status === 'disconnected') {
+      // Same config, just connect if disconnected
+      sftp.connect(activeConfig).catch(() => {});
     }
-  }, [showSftpPanel, activeConfig, sftp.status, sftp.connect]);
+
+    prevConfigRef.current = activeConfig;
+  }, [showSftpPanel, activeConfig, sftp]);
+
+  // Disconnect SFTP when SSH session disconnects
+  useEffect(() => {
+    if (!activeSessionId && sftp.status !== 'disconnected') {
+      sftp.disconnect();
+    }
+  }, [activeSessionId, sftp]);
 
   // SFTP: auto-load root directory after connection
   useEffect(() => {
@@ -121,7 +147,11 @@ export function AppLayout() {
     await disconnect(tabId);
     sshConfigsRef.current.delete(tabId);
     removeTab(tabId);
-  }, [disconnect, removeTab]);
+    // If closing active tab, disconnect SFTP
+    if (tabId === activeTabId && sftp.status !== 'disconnected') {
+      sftp.disconnect();
+    }
+  }, [disconnect, removeTab, activeTabId, sftp]);
 
   // Handle send data to SSH
   const handleSendData = useCallback((tabId: string, data: string) => {

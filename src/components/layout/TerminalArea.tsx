@@ -71,33 +71,58 @@ export function TerminalArea({
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
 
-  const handleTerminalReady = useCallback((tabId: string) => {
-    return (terminal: import('@xterm/xterm').Terminal) => {
-      // Dispose existing onData listener before registering new one
-      const existing = dataDisposablesRef.current.get(tabId);
-      if (existing) existing.dispose();
+  // Set up onData handlers when connection status changes
+  useEffect(() => {
+    if (!onSendData) return;
 
-      const status = connectionStatusRef.current?.get(tabId);
+    tabs.forEach((_, tabId) => {
+      const status = connectionStatus?.get(tabId);
+      const terminalHandle = terminalRefs.current.get(tabId);
+      const terminal = terminalHandle?.terminal;
+      if (!terminal) return;
+
+      // Clear old onData disposable
+      const existing = dataDisposablesRef.current.get(tabId);
+      if (existing) {
+        existing.dispose();
+        dataDisposablesRef.current.delete(tabId);
+      }
 
       if (status === 'connected') {
-        // SSH session exists - set up data handling
+        // SSH mode: forward input to backend
         const disposable = terminal.onData((data) => {
-          onSendDataRef.current?.(tabId, data);
+          onSendData(tabId, data);
         });
         dataDisposablesRef.current.set(tabId, disposable);
 
+        // Show connected message
         terminal.write(`\x1b[1;32m${t('terminal.connected')}\x1b[0m\r\n`);
-      } else {
-        // No SSH session - local echo mode
-        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - ${t('terminal.ready')}\r\n`);
-        terminal.write(`Tab: ${tabsRef.current.get(tabId)?.title || tabId}\r\n`);
-        terminal.write(`\r\n\x1b[90m${t('terminal.clickToConnect')}\x1b[0m\r\n`);
-
-        // Local echo for demo
+      } else if (status === 'disconnected') {
+        // Local echo mode for disconnected tabs
         const disposable = terminal.onData((data) => {
           terminal.write(data);
         });
         dataDisposablesRef.current.set(tabId, disposable);
+      }
+      // 'connecting' state - don't set up onData yet
+    });
+
+    return () => {
+      // Cleanup all onData handlers on unmount or when dependencies change
+      dataDisposablesRef.current.forEach((disposable) => {
+        disposable.dispose();
+      });
+    };
+  }, [connectionStatus, tabs, onSendData]);
+
+  const handleTerminalReady = useCallback((tabId: string) => {
+    return (terminal: import('@xterm/xterm').Terminal) => {
+      // Only display welcome message, onData management is handled by useEffect above
+      const status = connectionStatusRef.current?.get(tabId);
+      if (status !== 'connected') {
+        terminal.write(`\x1b[1;34mNovaTerm\x1b[0m - ${t('terminal.ready')}\r\n`);
+        terminal.write(`Tab: ${tabsRef.current.get(tabId)?.title || tabId}\r\n`);
+        terminal.write(`\r\n\x1b[90m${t('terminal.clickToConnect')}\x1b[0m\r\n`);
       }
     };
   }, []);
